@@ -38,7 +38,7 @@ export default function Menubar({ code, hasChanges, submitting, canSubmit, onSub
           </Button>
           <Button
             variant="default" // Emphasize the primary action
-            className="rounded-md md:rounded-full shadow-sm px-6 cursor-pointer bg-slate-800"
+            className="rounded-md md:rounded-full shadow-sm px-6 cursor-pointer bg-slate-800 hover:bg-slate-700"
             onClick={onSubmit}
             disabled={!canSubmit}
           >

@@ -77,7 +77,7 @@ export default function InputOTPForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="flex justify-center w-full mt-4 bg-slate-800 rounded-full" disabled={isLoading}>{isLoading ? <Spinner /> : "Join"}</Button>
+            <Button type="submit" className="flex justify-center w-full mt-4 bg-slate-800 hover:bg-slate-700 rounded-full" disabled={isLoading}>{isLoading ? <Spinner /> : "Join"}</Button>
           </form>
         </Form>
       </div>

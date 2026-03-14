@@ -103,6 +103,7 @@ export default function IDE({
           range: new monaco.Range(1, 1, fromLine - 1, newModel.getLineMaxColumn(fromLine - 1)),
           options: {
             isWholeLine: true,
+            className: 'dimmed-area-highlight',
             inlineClassName: "dimmed-code",
             marginClassName: "dimmed-margin",
             stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
@@ -115,6 +116,7 @@ export default function IDE({
           range: new monaco.Range(toLine, 1, lineCount, newModel.getLineMaxColumn(lineCount)),
           options: {
             isWholeLine: true,
+            className: 'dimmed-area-highlight',
             inlineClassName: "dimmed-code",
             marginClassName: "dimmed-margin",
             stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges

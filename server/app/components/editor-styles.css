@@ -3,12 +3,12 @@
 .editable-area-highlight {
 }
 .editable-area-margin {
-  border-left: 3px solid #1d293d;
-  background-color: #ddd;
+  border-left: 3px solid #2a2;
 }
 
 .dimmed-area-highlight {
   background-color: #eee;
+    cursor: not-allowed;
 }
 
 .dimmed-code {
