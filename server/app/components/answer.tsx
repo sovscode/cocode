@@ -19,8 +19,11 @@ export default function Answer({ question }: { question: Database["public"]["Tab
     <>
       <Menubar onSubmit={handleSubmit} />
       <div className="flex items-center justify-center p-5 h-[calc(100vh-60px)]">
-        <div className="border rounded-lg w-full h-full overflow-hidden shadow-md">
-          <IDE question={question} onChangeUserAnswer={setUserAnswer} />
+        <div className="border rounded-lg w-full h-full overflow-hidden shadow-md bg-white">
+          {question ?
+            <IDE question={question} onChangeUserAnswer={setUserAnswer} /> :
+            <div className="w-full h-full flex justify-center items-center">Waiting for the presenter to post a question ...</div>
+          }
         </div >
       </div >
     </ >

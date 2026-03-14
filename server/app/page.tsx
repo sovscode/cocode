@@ -68,8 +68,8 @@ export default function InputOTPForm() {
                 </FormItem>
               )}
             />
+            <Button type="submit" className="flex justify-center w-full mt-4 cursor-pointer">Submit</Button>
           </form>
-          <Button type="submit" className="flex justify-center w-full">Submit</Button>
         </Form>
       </div>
     </div>
