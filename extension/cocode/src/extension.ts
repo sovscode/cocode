@@ -126,6 +126,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     sidepanelViewProvider.updateSessionCode(sessionCode);
     sidepanelViewProvider.updateAnswers([]);
+    sidepanelViewProvider.showAnswerPage()
   };
 
   // register command to rejoin previous session
@@ -156,7 +157,6 @@ export async function activate(context: vscode.ExtensionContext) {
         (await result.json()) as Session;
       console.log(sessionId, sessionCode);
       joinSession(sessionId, sessionCode);
-      sidepanelViewProvider.showAnswerPage()
     }),
   );
 

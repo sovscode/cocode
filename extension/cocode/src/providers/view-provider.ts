@@ -27,8 +27,6 @@ export class ViewProvider implements vscode.WebviewViewProvider {
     const codiconsUri = webviewView.webview
       .asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
 
-    webviewView.webview.options = { enableScripts: true };
-
     let codeCompletionStylesheet = null;
     if (vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark) {
       codeCompletionStylesheet = "atom-one-dark";
@@ -37,29 +35,31 @@ export class ViewProvider implements vscode.WebviewViewProvider {
     } else {
       codeCompletionStylesheet = "atom-one-dark";
     }
-    webviewView.webview.html = this._getHtml()
+
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.html = this._getHtml()      
       .replaceAll("{{CODEICONS_URI_MAGICAL_STRING}}", codiconsUri.toString())
       .replaceAll("{{CODE_COMPLETION_STYLESHEET_MAGICAL_STRING}}", codeCompletionStylesheet);
 
     // Handle messages sent from the webview
-    webviewView.webview.onDidReceiveMessage((message) => {
-      if (message.command === 'StartSession') {
+    webviewView.webview.onDidReceiveMessage(({ command, ...data }) => {
+      if (command === 'StartSession') {
         vscode.commands.executeCommand('cocode.startSession');
-      } else if (message.command === 'RejoinSession') {
+      } else if (command === 'RejoinSession') {
         vscode.commands.executeCommand('cocode.rejoinSession');
-      } else if(message.command === 'postQuestion') {
+      } else if(command === 'postQuestion') {
         vscode.commands.executeCommand('cocode.postQuestion');
-      } else if (message.command === 'debug') {
-        vscode.window.showInformationMessage(`[WEBVIEW DEBUG]: ${message.msg}`);
-      } else if (message.command === 'chooseAnswer') {
-        this.chosenAnswerId = message.id;
-        this.onChooseAnswer(message.id)
-      } else if (message.command === 'acceptSuggestion') {
+      } else if (command === 'debug') {
+        vscode.window.showInformationMessage(`[WEBVIEW DEBUG]: ${data.msg}`);
+      } else if (command === 'chooseAnswer') {
+        this.chosenAnswerId = data.id;
+        this.onChooseAnswer(data.id)
+      } else if (command === 'acceptSuggestion') {
         vscode.commands.executeCommand('cocode.acceptSuggestion');
-      } else if (message.command === 'rejectSuggestions') {
+      } else if (command === 'rejectSuggestions') {
         vscode.commands.executeCommand('cocode.rejectSuggestions');
-      } else if (message.command === 'deleteSuggestion') {
-        vscode.commands.executeCommand('cocode.deleteSuggestion', message.id)
+      } else if (command === 'deleteSuggestion') {
+        vscode.commands.executeCommand('cocode.deleteSuggestion', data.id)
       }
     });
 
