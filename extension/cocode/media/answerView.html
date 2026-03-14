@@ -30,6 +30,11 @@
     button:hover {
         background: var(--vscode-button-hoverBackground);
     }
+
+    button:disabled {
+        display: none;
+    }
+
     #session-code {
         color: var(--vscode-descriptionForeground);
         font-size: 12px;
@@ -99,10 +104,10 @@
     <h2>Session code: <a id="session-code-value"></a></h2>
     <button id="post-question-btn">Post Question</button>
 
-    <div id="answer-container">
-        
+    <h3 style="margin-bottom: 0px">Answers</h3>
+    <div id="answer-container"></div>
 
-    </div>
+    <button id="close-question-btn">Close question</button>
 
     <template id="answer-template">
         <div class="answer">
@@ -117,23 +122,44 @@
     const vscode = acquireVsCodeApi();
 
     let answers = []
-    let chosenIdx = -1;
+    let chosenAnswerId = null
+    let currentQuestionId = null;
+    updateQuestionId(null);
 
-    function chooseAnswer(idx) {
+    function updateQuestionId(id) {
+        vscode.postMessage({ command: 'debug', msg: JSON.stringify(id) })
+        currentQuestionId = id
+        document.querySelector('#post-question-btn').disabled = currentQuestionId !== null
+        document.querySelector('#close-question-btn').disabled = currentQuestionId === null
+        document.querySelector('h3').hidden = currentQuestionId === null
+    }
+
+    function chooseAnswer(id) {
         const container = document.querySelector('#answer-container')
-        if (chosenIdx !== -1) {
-            container.children[chosenIdx].classList.remove('chosen')
+        if (chosenAnswerId !== null) {
+            const child = Array.from(container.children).find(elm => elm.id === `answer-${chosenAnswerId}`)
+            child.classList.remove('chosen')
         }
 
-        container.children[idx].classList.add('chosen')
-        chosenIdx = idx
-
-        vscode.postMessage({ command: 'chooseAnswer', id: answers[chosenIdx].id })
+        if (chosenAnswerId !== id) {
+            const child = Array.from(container.children).find(elm => elm.id === `answer-${id}`)
+            child.classList.add('chosen')
+            chosenAnswerId = id
+            vscode.postMessage({ command: 'chooseAnswer', id })
+        } else {
+            chosenAnswerId = null
+            vscode.postMessage({ command: 'chooseAnswer', id: null })
+        }
     }
 
     document.getElementById('post-question-btn')
             .addEventListener('click', () => {
         vscode.postMessage({ command: 'postQuestion' });
+    });
+
+    document.getElementById('close-question-btn')
+            .addEventListener('click', () => {
+        vscode.postMessage({ command: 'closeQuestion' });
     });
 
     // Listen for label updates from the extension
@@ -147,14 +173,16 @@
             const element = document.getElementById('session-code-value');
             element.textContent = event.data.text;
             element.href = `https://cocode.kasperskov.dev/answer?code=${event.data.text}`;
-
+        } else if (event.data.command === "updateQuestion") {
+            updateQuestionId(event.data.id)
         } else if (event.data.command === "updateAnswers") {
             answers = event.data.answers
         
-            const elements = event.data.answers.map((answer, idx) => {
+            const elements = event.data.answers.map(answer => {
                 const elm = document.querySelector('#answer-template').content.firstElementChild.cloneNode(true)
+                elm.id = `answer-${answer.id}`
                 elm.querySelector('.answer-code').textContent = answer.text
-                elm.addEventListener('click', () => chooseAnswer(idx))
+                elm.addEventListener('click', () => chooseAnswer(answer.id))
                 return elm
             })
             
