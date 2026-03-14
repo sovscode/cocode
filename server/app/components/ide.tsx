@@ -24,7 +24,7 @@ export default function IDE({
   // Calculate the immutable line counts
   const initialTotalLines = question.content.split(/\r?\n/).length;
   const fromLine = Math.min(question.from_line || 1, initialTotalLines)
-  const toLine = Math.min(question.to_line || 2, initialTotalLines)
+  const toLine = Math.min(question.to_line || 2, initialTotalLines + 1)
   console.log(fromLine, toLine)
   const topReadonlyCount = fromLine - 1;
   const bottomReadonlyCount = Math.max(0, initialTotalLines - toLine + 1);

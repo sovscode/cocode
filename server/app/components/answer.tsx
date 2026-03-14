@@ -5,7 +5,7 @@ import IDE from "./ide";
 import Menubar from "./menubar";
 import { Database } from "@/utils/supabase/database.types";
 
-export default function Answer({ question }: { question: Database["public"]["Tables"]["Question"]["Row"] }) {
+export default function Answer({ code, question }: { code: number, question: Database["public"]["Tables"]["Question"]["Row"] }) {
   const [userAnswer, setUserAnswer] = useState("")
 
   const handleSubmit = () => {
@@ -17,9 +17,9 @@ export default function Answer({ question }: { question: Database["public"]["Tab
   }
   return (
     <>
-      <Menubar onSubmit={handleSubmit} />
+      <Menubar code={code} onSubmit={handleSubmit} />
       <div className="flex items-center justify-center p-5 h-[calc(100vh-60px)]">
-        <div className="border rounded-lg w-full h-full overflow-hidden shadow-md bg-white">
+        <div className="border border-zinc-100 rounded-lg w-full h-full overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
           {question ?
             <IDE question={question} onChangeUserAnswer={setUserAnswer} /> :
             <div className="w-full h-full flex justify-center items-center">Waiting for the presenter to post a question ...</div>

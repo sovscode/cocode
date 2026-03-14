@@ -81,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
   
   setInterval(apiPollAnswers, ANSWER_POLL_TIMEOUT)
-
+  
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('cocodeAnswers', provider)
   )
@@ -95,6 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
     await context.workspaceState.update("cocodeSessionCode", sessionCode);
     
     provider.updateSessionCode(sessionCode);
+    provider.updateAnswers([])
     provider.updateAnswers([])
   };
 

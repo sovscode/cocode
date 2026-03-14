@@ -2,6 +2,14 @@ import { Answer, Question, QuestionPostResult } from "./types";
 import * as vscode from 'vscode';
 const { getUpdatedRanges } = require('vscode-position-tracking')
 
+type State = {
+    questionId: number;
+    originalQuestionContent: string;
+
+    editor: vscode.TextEditor;
+    range: DynamicRange | null;
+}
+
 class DynamicRange {
     private range_: vscode.Range;
     private onRangeRemoved: () => void;
@@ -37,14 +45,6 @@ class DynamicRange {
 
         this.range_ = updatedRanges[0]
     }
-}
-
-type State = {
-    questionId: number;
-    originalQuestionContent: string;
-
-    editor: vscode.TextEditor;
-    range: DynamicRange | null;
 }
 
 export class QuestionManager {
