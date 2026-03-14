@@ -179,6 +179,10 @@ export default function IDE({
         defaultLanguage="javascript"
         onMount={handleEditorDidMount}
         onChange={handleChange}
+        options={{
+          automaticLayout: true,
+          fixedOverflowWidgets: true, // <-- The magic fix!
+        }}
       /> : <div>Waiting for the presenter to post a question ...</div >)
   );
 }

@@ -11,32 +11,34 @@ export default function Menubar({ code, hasChanges, submitting, canSubmit, onSub
   };
 
   return (
-    <div className="sticky top-2 z-50 flex w-full justify-center px-4">
-      <div className="w-full max-w-4xl flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-md border border-gray-200 rounded-full shadow-sm">
+    <div className="z-50 flex w-full justify-stretch">
+      <div className="w-full flex items-center justify-between px-2 md:px-4 py-3 bg-white/90 backdrop-blur-md border border-zinc-100 rounded-md md:rounded-3xl shadow-sm">
         <Link href="/" className="group flex items-center justify-center gap-2 cursor-pointer">
           <img src={"/icon-cocode-3.svg"} className="w-20" />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
 
           <Button
             variant="ghost"
-            className="text-gray-500 hover:text-gray-900 cursor-pointer"
+            className="text-gray-500 hover:text-gray-900 cursor-pointer rounded-md md:rounded-full"
             onClick={handleLeave}
           >
-            Leave session {code}
+            <p className="hidden md:block">Leave session {code}</p>
+            <p className="block md:hidden">Leave {code}</p>
           </Button>
 
           <Button
             variant="outline"
-            className="text-gray-500 hover:text-gray-900 cursor-pointer"
+            className="text-gray-500 hover:text-gray-900 cursor-pointer rounded-md md:rounded-full"
             onClick={onReset}
             disabled={!hasChanges}
           >
-            Reset changes
+            <p className="hidden md:block">Reset changes</p>
+            <p className="block md:hidden">Reset</p>
           </Button>
           <Button
             variant="default" // Emphasize the primary action
-            className="rounded-full shadow-sm px-6 cursor-pointer bg-slate-800"
+            className="rounded-md md:rounded-full shadow-sm px-6 cursor-pointer bg-slate-800"
             onClick={onSubmit}
             disabled={!canSubmit}
           >

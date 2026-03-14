@@ -42,10 +42,10 @@ export default function Answer({ code, question }: { code: number, question: Dat
     setResetKey((key) => key + 1)
   }
   return (
-    <>
+    <div className="w-full max-w-5xl mx-auto p-2 md:p-4 flex flex-col justify-center items-stretch gap-2 md:gap-4 h-screen">
       <Menubar code={code} submitting={submitting} onSubmit={handleSubmit} onReset={handleReset} hasChanges={hasChanges} canSubmit={canSubmit} />
-      <div className="flex items-center justify-center p-5 md:p-10 md:pt-5 h-[calc(100vh-65px)]">
-        <div className="border border-zinc-100 rounded-lg w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
+      <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
+        <div className="border border-zinc-100 rounded-xl overflow-hidden w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
           {question ?
             <IDE key={resetKey} question={question} onChangeUserAnswer={setUserAnswer} /> :
             <div className="w-full h-full flex justify-center items-center">Waiting for the presenter to post a question ...</div>
@@ -68,6 +68,6 @@ export default function Answer({ code, question }: { code: number, question: Dat
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
