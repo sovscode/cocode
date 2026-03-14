@@ -58,7 +58,7 @@ export class QuestionManager {
         this.state = null;
         this.decorationHandler = new DecorationHandler();
 
-        this.apiPostQuestion = apiPostQuestion
+        this.apiPostQuestion = apiPostQuestion;
 
         vscode.workspace.onDidChangeTextDocument(event => {
             if (this.state === null) return;
@@ -68,6 +68,20 @@ export class QuestionManager {
         vscode.window.onDidChangeVisibleTextEditors(() => {
             this.refreshDecorations();
         })
+
+        vscode.workspace.onDidSaveTextDocument(document => {
+            if (this.state?.document.uri.scheme === 'untitled' && this.state) {
+                this.state.document = document;
+            }
+        });
+        vscode.workspace.onDidRenameFiles(async event => {
+            if (this.state === null) return;
+            const renamedFile = event.files.find(f => f.oldUri.toString() === this.state?.document.uri.toString());
+            if (renamedFile) {
+                this.state.document = await vscode.workspace.openTextDocument(renamedFile.newUri);
+            }
+        });
+
     }
 
     onRangeRemoved() {
