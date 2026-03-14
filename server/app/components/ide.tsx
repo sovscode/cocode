@@ -61,6 +61,7 @@ export default function IDE({
 
     constrainedInstance.initializeIn(editor);
     editor.focus();
+    editor.updateOptions({ minimap: { enabled: false }, scrollBeyondLastLine: false })
 
     const initialPosition = { lineNumber: fromLine || 1, column: 1 };
     editor.setPosition(initialPosition);
@@ -80,7 +81,12 @@ export default function IDE({
 
       constrainedInstance.addRestrictionsTo(newModel, restrictions);
 
-      const decorations = [{
+      // --- NEW DECORATIONS LOGIC ---
+      const decorations = [];
+      const lineCount = newModel.getLineCount();
+
+      // 1. Highlight the Editable Area (Your existing logic)
+      decorations.push({
         range: new monaco.Range(range[0], range[1], range[2], range[3]),
         options: {
           isWholeLine: true,
@@ -88,8 +94,41 @@ export default function IDE({
           marginClassName: "editable-area-margin",
           stickiness: monaco.editor.TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges
         }
-      }];
+      });
+
+      // 2. Dim the Top Read-Only Area
+      if (fromLine > 1) {
+        decorations.push({
+          range: new monaco.Range(1, 1, fromLine - 1, newModel.getLineMaxColumn(fromLine - 1)),
+          options: {
+            isWholeLine: true,
+            inlineClassName: "dimmed-code",
+            className: "dimmed-area-highlight",
+            marginClassName: "dimmed-margin",
+            // Keep the decoration fixed to these exact lines
+            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+          }
+        });
+      }
+
+      // 3. Dim the Bottom Read-Only Area
+      if (toLine <= lineCount) {
+        decorations.push({
+          range: new monaco.Range(toLine, 1, lineCount, newModel.getLineMaxColumn(lineCount)),
+          options: {
+            isWholeLine: true,
+            inlineClassName: "dimmed-code",
+            className: "dimmed-area-highlight",
+            marginClassName: "dimmed-margin",
+            // Keep the decoration fixed to these exact lines
+            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+          }
+        });
+      }
+
+      // Apply all decorations at once
       editor.createDecorationsCollection(decorations);
+
     } else {
       // Fallback: make the whole editor read-only
       editor.updateOptions({ readOnly: true });
@@ -124,6 +163,30 @@ export default function IDE({
         defaultLanguage="javascript"
         onMount={handleEditorDidMount}
         onChange={handleChange}
-      /> : <div>Waiting for the presenter to post a question ...</div>)
+      /> : <div>Waiting for the presenter to post a question ...</div >)
   );
+}
+
+
+/**
+* Extracts a specific range of lines from a multi-line string.
+*
+* @param {string} text - The full multi-line string.
+* @param {number} fromLine - The starting line number (1-indexed, inclusive).
+* @param {number} toLine - The ending line number (1-indexed, exclusive).
+* @returns {string} The extracted lines.
+*/
+export function extractLineRange(text: string, fromLine: number, toLine: number) {
+  if (!text) return "";
+
+  const lines = text.split(/\r?\n/);
+
+  // Convert 1-based line numbers to 0-based array indices
+  const startIndex = Math.max(0, fromLine - 1);
+  const endIndex = Math.max(0, toLine - 1);
+
+  // slice(start, end) includes start and excludes end
+  const extractedLines = lines.slice(startIndex, endIndex);
+
+  return extractedLines.join('\n');
 }

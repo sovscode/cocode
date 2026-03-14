@@ -51,7 +51,6 @@ export default function RealtimeAnswer({
   }, [code, supabase]);
 
   if (error) {
-
     return <div>An error occured: {error}</div>;
   }
 

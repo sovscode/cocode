@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Spinner } from "@/components/ui/spinner";
 
-export default function Menubar({ code, onSubmit }: { code: number, onSubmit: () => void }) {
+export default function Menubar({ code, hasChanges, submitting, canSubmit, onSubmit, onReset }: { code: number, hasChanges: boolean, submitting: boolean, canSubmit: boolean, onSubmit: () => void, onReset: () => void }) {
   const router = useRouter();
 
   const handleLeave = () => {
@@ -16,6 +17,7 @@ export default function Menubar({ code, onSubmit }: { code: number, onSubmit: ()
           <img src={"/icon-cocode-3.svg"} className="w-20" />
         </Link>
         <div className="flex items-center gap-2">
+
           <Button
             variant="ghost"
             className="text-gray-500 hover:text-gray-900 cursor-pointer"
@@ -23,12 +25,22 @@ export default function Menubar({ code, onSubmit }: { code: number, onSubmit: ()
           >
             Leave session {code}
           </Button>
+
+          <Button
+            variant="outline"
+            className="text-gray-500 hover:text-gray-900 cursor-pointer"
+            onClick={onReset}
+            disabled={!hasChanges}
+          >
+            Reset changes
+          </Button>
           <Button
             variant="default" // Emphasize the primary action
-            className="rounded-full shadow-sm px-6 cursor-pointer bg-green-600"
+            className="rounded-full shadow-sm px-6 cursor-pointer bg-slate-800"
             onClick={onSubmit}
+            disabled={!canSubmit}
           >
-            Submit
+            {submitting ? <Spinner /> : "Submit"}
           </Button>
         </div>
 
