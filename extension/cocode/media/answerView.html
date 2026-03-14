@@ -90,6 +90,24 @@
         padding: 4px;
     }
 
+    .answer-delete-icon {
+        display: none;
+    }
+
+    .answer:hover .answer-delete-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 4px;
+    }
+
+    .answer-delete-icon:hover {
+        color: var(--vscode-errorForeground);
+    }
+
     .answer:hover {
         background: var(--vscode-list-hoverBackground);
         border-color: var(--vscode-focusBorder);
@@ -124,6 +142,9 @@
             <pre><code class="answer-code"></code></pre>
             <div class="answer-check-icon">
                 <i class="codicon codicon-check"></i>
+            </div>
+            <div class="answer-delete-icon">
+                <i class="codicon codicon-trash"></i>
             </div>
         </div>
     </template>
@@ -205,6 +226,10 @@
                 codeElement.textContent = answer.text;
                 codeElement.classList.add(`language-${currentQuestionLanguage}`);
                 elm.addEventListener('click', () => chooseAnswer(answer.id))
+                elm.querySelector('.answer-delete-icon').addEventListener('click', (e) => {
+                    e.stopPropagation(); // prevent triggering the chooseAnswer event
+                    vscode.postMessage({ command: 'deleteSuggestion', id: answer.id })
+                })
                 return elm
             })
             const container = document.querySelector('#answer-container')

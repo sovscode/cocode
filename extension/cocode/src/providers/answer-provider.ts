@@ -43,6 +43,8 @@ export class AnswerViewProvider implements vscode.WebviewViewProvider {
         vscode.commands.executeCommand('cocode.acceptSuggestion');
       } else if (message.command === 'rejectSuggestions') {
         vscode.commands.executeCommand('cocode.rejectSuggestions');
+      } else if (message.command === 'deleteSuggestion') {
+        vscode.window.showInformationMessage(`Delete suggestion with id ${message.id}`); // TODO: FELIX implement deleting suggestions
       }
     });
 
