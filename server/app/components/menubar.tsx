@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Spinner } from "@/components/ui/spinner";
 
-export default function Menubar({ code, hasChanges, onSubmit, onReset }: { code: number, hasChanges: boolean, onSubmit: () => void, onReset: () => void }) {
+export default function Menubar({ code, hasChanges, submitting, canSubmit, onSubmit, onReset }: { code: number, hasChanges: boolean, submitting: boolean, canSubmit: boolean, onSubmit: () => void, onReset: () => void }) {
   const router = useRouter();
 
   const handleLeave = () => {
@@ -37,9 +38,9 @@ export default function Menubar({ code, hasChanges, onSubmit, onReset }: { code:
             variant="default" // Emphasize the primary action
             className="rounded-full shadow-sm px-6 cursor-pointer bg-slate-800"
             onClick={onSubmit}
-            disabled={!hasChanges}
+            disabled={!canSubmit}
           >
-            Submit
+            {submitting ? <Spinner /> : "Submit"}
           </Button>
         </div>
 

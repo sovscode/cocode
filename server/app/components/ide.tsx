@@ -81,7 +81,12 @@ export default function IDE({
 
       constrainedInstance.addRestrictionsTo(newModel, restrictions);
 
-      const decorations = [{
+      // --- NEW DECORATIONS LOGIC ---
+      const decorations = [];
+      const lineCount = newModel.getLineCount();
+
+      // 1. Highlight the Editable Area (Your existing logic)
+      decorations.push({
         range: new monaco.Range(range[0], range[1], range[2], range[3]),
         options: {
           isWholeLine: true,
@@ -89,8 +94,41 @@ export default function IDE({
           marginClassName: "editable-area-margin",
           stickiness: monaco.editor.TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges
         }
-      }];
+      });
+
+      // 2. Dim the Top Read-Only Area
+      if (fromLine > 1) {
+        decorations.push({
+          range: new monaco.Range(1, 1, fromLine - 1, newModel.getLineMaxColumn(fromLine - 1)),
+          options: {
+            isWholeLine: true,
+            inlineClassName: "dimmed-code",
+            className: "dimmed-area-highlight",
+            marginClassName: "dimmed-margin",
+            // Keep the decoration fixed to these exact lines
+            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+          }
+        });
+      }
+
+      // 3. Dim the Bottom Read-Only Area
+      if (toLine <= lineCount) {
+        decorations.push({
+          range: new monaco.Range(toLine, 1, lineCount, newModel.getLineMaxColumn(lineCount)),
+          options: {
+            isWholeLine: true,
+            inlineClassName: "dimmed-code",
+            className: "dimmed-area-highlight",
+            marginClassName: "dimmed-margin",
+            // Keep the decoration fixed to these exact lines
+            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+          }
+        });
+      }
+
+      // Apply all decorations at once
       editor.createDecorationsCollection(decorations);
+
     } else {
       // Fallback: make the whole editor read-only
       editor.updateOptions({ readOnly: true });
