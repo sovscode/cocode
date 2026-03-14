@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
+
+import { REGEXP_ONLY_DIGITS } from "input-otp"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -40,9 +42,13 @@ export default function InputOTPForm() {
   }
 
   return (
-    <div className="w-full h-screen flex justify-center items-center">
-      <div className="space-y-6 border-gray-200 bg-white border p-4 rounded-lg flex-col justify-center items-center shadow-md">
-        <p className="text-lg text-center">Join a Session</p>
+    <div className="w-full h-screen flex flex-col justify-center items-center gap-6">
+      <div className="flex w-full justify-center">
+        <img src={"/icon-cocode-3.svg"} className="w-30" />
+      </div>
+      <div className="space-y-6 border-zinc-100 bg-white border p-4 rounded-lg flex-col justify-center items-center shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+
+        <p className="text-xl font-bold text-center mb-2">Join a Session</p>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <FormField
@@ -51,9 +57,8 @@ export default function InputOTPForm() {
               render={({ field }) => (
                 <FormItem className="flex flex-col justify-center items-center w-full">
                   <FormControl>
-                    {/* 4. Connect the InputOTP component to the form field */}
-                    <InputOTP autoFocus maxLength={4} {...field}>
-                      <InputOTPGroup>
+                    <InputOTP autoFocus maxLength={4} pattern={REGEXP_ONLY_DIGITS} {...field}>
+                      <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-16 *:data-[slot=input-otp-slot]:w-16 *:data-[slot=input-otp-slot]:text-2xl">
                         <InputOTPSlot index={0} />
                         <InputOTPSlot index={1} />
                         <InputOTPSlot index={2} />
@@ -68,7 +73,7 @@ export default function InputOTPForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="flex justify-center w-full mt-4 cursor-pointer">Submit</Button>
+            <Button type="submit" className="flex justify-center w-full mt-4 bg-green-600 rounded-full">Submit</Button>
           </form>
         </Form>
       </div>

@@ -60,5 +60,5 @@ export default function RealtimeAnswer({
     return <div>An error occured: {error}</div>;
   }
 
-  return <Answer question={question} />;
+  return <Answer code={code} question={question} />;
 }
