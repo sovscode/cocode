@@ -117,6 +117,9 @@
 }
 
 @layer base {
+  :root {
+    --font-sans: 'Your-Font', sans-serif;
+  }
   * {
     @apply border-border outline-ring/50;
   }

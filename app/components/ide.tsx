@@ -6,6 +6,7 @@ import type { Database } from '@/utils/supabase/database.types';
 /* @ts-ignore */
 import { constrainedEditor } from 'constrained-editor-plugin';
 import "./editor-styles.css";
+import { Button } from '@/components/ui/button';
 
 export default function IDE({ question }: { question: Database["public"]["Tables"]["Question"]["Row"] }) {
   const editorRef = useRef<editor.IStandaloneCodeEditor>(null);
@@ -90,7 +91,7 @@ export default function IDE({ question }: { question: Database["public"]["Tables
 
   return (
     <>
-      <button onClick={handleSubmit}>Submit</button>
+      <Button className='cursor-pointer' onClick={handleSubmit}>Submit</Button>
       <Editor
         height="90vh"
         defaultLanguage="javascript"
