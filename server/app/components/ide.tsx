@@ -57,7 +57,7 @@ export default function IDE({
       oldModel.dispose();
     }
 
-    const newModel = monaco.editor.createModel(question.content, "javascript");
+    const newModel = monaco.editor.createModel(question.content, question.language || "javascript");
     editor.setModel(newModel);
 
     constrainedInstance.initializeIn(editor);
