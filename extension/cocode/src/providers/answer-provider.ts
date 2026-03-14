@@ -72,7 +72,7 @@ export class AnswerViewProvider implements vscode.WebviewViewProvider {
     if (this._view) {
       this._view.webview.postMessage({
         command: 'updateQuestion',
-        id: this.question?.id,
+        id: this.question?.id || null,
         language: this.question?.language || "javascript"
       });
     }
