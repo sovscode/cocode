@@ -72,7 +72,7 @@ export class QuestionManager {
         
         this.decorationHandler.updateRange(editor, range);
 
-        const sessionId = await this.context.workspaceState.get("cocodeSessionId", null);
+        const sessionId = this.context.workspaceState.get("cocodeSessionId", null);
         const result = await fetch(`http://localhost:3000/api/sessions/${sessionId}/questions`, {
             method: 'POST',
             headers: {
@@ -88,7 +88,6 @@ export class QuestionManager {
         const { id: qid } = await result.json() as QuestionPostResult;
         console.log(qid);
         this.activeQuestionId = qid;
-
     }
 
     async pollAnswers() {
@@ -98,7 +97,7 @@ export class QuestionManager {
         const sessionId = await this.context.workspaceState.get("cocodeSessionId", null);
 
         const result = await fetch(`http://localhost:3000/api/sessions/${sessionId}/questions/${this.activeQuestionId}/answers`);
-        console.log(result);
+        console.log(await result.json());
     }
 }
 

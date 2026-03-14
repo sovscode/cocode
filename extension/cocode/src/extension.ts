@@ -13,7 +13,6 @@ export function activate(context: vscode.ExtensionContext) {
   const previousId = context.workspaceState.get("cocodeSessionId", null);
   vscode.commands.executeCommand('setContext', 'cocode.showRejoin', previousId !== null); 
   
-    
   const startSessionProvider = new StartSessionViewProvider();
 
   context.subscriptions.push(
@@ -22,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 
   const htmlPath = path.join(context.extensionPath, 'media', 'view.html');
-  const provider = new MyPanelViewProvider(htmlPath);
+  const provider = new MyPanelViewProvider(htmlPath, context.extensionUri);
 
   const questionManager = new QuestionManager(provider, context);
 
@@ -38,7 +37,9 @@ export function activate(context: vscode.ExtensionContext) {
     await context.workspaceState.update("cocodeSessionCode", sessionCode);
     
     provider.updateLabel(`Joining session with code: ${sessionCode}`);
-    
+
+    // TODO: remove, testing
+    provider.updateAnswers([{ text: 'int i = 0; i < 0; ++i', id: 3 }, { text: 'i in range(10)', id: 2 }])
   };
 
   // register command to rejoin previous session
@@ -46,8 +47,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cocode.rejoinSession', () => {
       const sessionId = context.workspaceState.get("cocodeSessionId", null);
       const sessionCode = context.workspaceState.get("cocodeSessionCode", null);
-
-
 
       if (sessionId && sessionCode) {
         joinSession(sessionId, sessionCode);
@@ -83,7 +82,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       await questionManager.startQuestion(editor);
-
     })
   );
 

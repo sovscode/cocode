@@ -32,19 +32,127 @@
         color: var(--vscode-descriptionForeground);
         font-size: 12px;
     }
+
+    #answer-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+        user-select: none;
+    }
+
+    .answer {
+        position: relative;
+        background: var(--vscode-sideBar-background);
+        color: var(--vscode-foreground);
+        border: 1px solid var(--vscode-widget-border);
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease;
+        
+    }
+
+    .answer-code {
+        font-family: var(--vscode-editor-font-family);
+        font-size: var(--vscode-editor-font-size);
+        /* Keeps code snippets from wrapping weirdly */
+        white-space: pre-wrap; 
+        word-break: break-all;
+    }
+
+    .answer.chosen {
+        background: var(--vscode-list-hoverBackground);
+        border-color: var(--vscode-focusBorder);
+    }
+
+    .answer-check-icon { 
+        display: none
+    }
+
+    .answer.chosen .answer-check-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 4px;
+    }
+
+    .answer:hover {
+        background: var(--vscode-list-hoverBackground);
+        border-color: var(--vscode-focusBorder);
+    }
+
+    .answer:active {
+        background: var(--vscode-list-activeSelectionBackground);
+        color: var(--vscode-list-activeSelectionForeground);
+    }
+
 </style>
+<link href="{{CODEICONS_URI_MAGICAL_STRING}}" rel="stylesheet"/>
 </head>
 <body>
     <label id="session-code">Session code: </label>
+
+    <div id="answer-container">
+        
+
+    </div>
+
+    <template id="answer-template">
+        <div class="answer">
+            <div class="answer-code">
+
+            </div>
+            <div class="answer-check-icon">
+                <i class="codicon codicon-check"></i>
+            </div>
+        </div>
+    </template>
+
 <script>
     const vscode = acquireVsCodeApi();
 
+    let chosenIdx = -1;
+    const answerContainer = document.getElementById('answer-container');
+
+    function chooseAnswer(idx) {
+        if (chosenIdx !== -1) {
+            answerContainer.children[chosenIdx].classList.remove('chosen')
+        }
+        answerContainer.children[idx].classList.add('chosen')
+        chosenIdx = idx
+    }
 
     // Listen for label updates from the extension
     window.addEventListener('message', (event) => {
-        const { command, text } = event.data;
-        if (command === 'updateLabel') {
-            document.getElementById('session-code').textContent = text;
+        vscode.postMessage({
+            command: 'debug',
+            msg: `Got event ${JSON.stringify(event.data)}`
+        })
+
+        if (event.data.command === 'updateLabel') {
+            document.getElementById('session-code').textContent = event.data.text;
+        } else if (event.data.command === "updateAnswers") {
+            answerContainer.innerHTML = ""
+            const elements = event.data.answers.forEach((answer, idx) => {
+                const elm = document.querySelector('#answer-template').content.firstElementChild.cloneNode(true)
+                elm.querySelector('.answer-code').textContent = answer.text
+
+                elm.addEventListener('click', () => chooseAnswer(idx))
+
+                answerContainer.appendChild(elm)
+            })
+            // .map(
+            //    ({ text }) => {
+            //        vscode.postMessage({
+            //            command: 'debug',
+            //            msg: JSON.stringify(answer)
+            //        })
+            //    }
+            //)
         }
     });
 </script>

@@ -64,14 +64,14 @@
     ],
     "menus": {
       "editor/context": [
-          {
-            "command": "cocode.postQuestion",
-            "group": "CoCode",
-            "when": "editorTextFocus"
-          }
-        ]
-      }
-},
+        {
+          "command": "cocode.postQuestion",
+          "group": "CoCode",
+          "when": "editorTextFocus"
+        }
+      ]
+    }
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -91,6 +91,7 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.45",
     "vscode-position-tracking": "^0.1.0"
   }
 }
