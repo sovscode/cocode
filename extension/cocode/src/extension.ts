@@ -27,10 +27,6 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   const answerViewPath = path.join(context.extensionPath, 'media', 'answerView.html');
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/main
 
   let answers: Answer[] = []
   const onChooseAnswerInPanel = (id: number) => {
