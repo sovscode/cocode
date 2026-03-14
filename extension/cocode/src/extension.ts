@@ -70,7 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
     await context.workspaceState.update("cocodeSessionId", sessionId);
     await context.workspaceState.update("cocodeSessionCode", sessionCode);
     
-    provider.updateLabel(`Joining session with code: ${sessionCode}`);
+    provider.updateSessionCode(sessionCode);
     provider.updateAnswers([])
   };
 

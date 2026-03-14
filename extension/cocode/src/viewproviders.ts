@@ -54,6 +54,8 @@ export class MyPanelViewProvider implements vscode.WebviewViewProvider {
   private html: string;
   private extensionUri: vscode.Uri;
   private onChooseAnswer: (id: number) => void;
+  private answers: Answer[] = [];
+  private sessionCode: number | null = null;
 
   constructor(htmlPath: string, extensionUri: vscode.Uri, onChooseAnswer: (id: number) => void) {
 	  this.html = fs.readFileSync(htmlPath, 'utf-8');
@@ -78,15 +80,35 @@ export class MyPanelViewProvider implements vscode.WebviewViewProvider {
         this.onChooseAnswer(message.id)
       }
     });
+
+    webviewView.onDidChangeVisibility(() => {
+      this.sendSessionCodeToWebview();
+      this.sendAnswersToWebview();
+    });
+
+  }
+
+  private sendSessionCodeToWebview(): void {
+    if (this._view) {
+      this._view.webview.postMessage({ command: 'setSessionCode', text: this.sessionCode });
+    }
+  }
+
+  private sendAnswersToWebview(): void {
+    if (this._view) {
+      this._view.webview.postMessage({ command: 'updateAnswers', answers: this.answers });
+    }
   }
 
   // Call this from anywhere in your extension to update the label
-  updateLabel(text: string) {
-    this._view?.webview.postMessage({ command: 'updateLabel', text });
+  updateSessionCode(code: number) {
+    this.sessionCode = code;
+    this.sendSessionCodeToWebview();
   }
 
   updateAnswers(answers: Answer[]) {
-    this._view?.webview.postMessage({ command: 'updateAnswers', answers })
+    this.answers = answers;
+    this.sendAnswersToWebview();
   }
 
   private _getHtml(): string {

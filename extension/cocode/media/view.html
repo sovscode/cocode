@@ -94,7 +94,7 @@
 <link href="{{CODEICONS_URI_MAGICAL_STRING}}" rel="stylesheet"/>
 </head>
 <body>
-    <label id="session-code">Session code: </label>
+    <p>Session code: <span id="session-code-value"></span></p>
 
     <div id="answer-container">
         
@@ -137,8 +137,8 @@
             msg: `Got event ${JSON.stringify(event.data)}`
         })
 
-        if (event.data.command === 'updateLabel') {
-            document.getElementById('session-code').textContent = event.data.text;
+        if (event.data.command === 'setSessionCode') {
+            document.getElementById('session-code-value').textContent = event.data.text;
         } else if (event.data.command === "updateAnswers") {
             answers = event.data.answers
         
@@ -150,7 +150,7 @@
             })
             
             const container = document.querySelector('#answer-container')
-            elements.innerHTML = ""
+            container.innerHTML = ""
             elements.forEach(elm => container.appendChild(elm))
         }
     });
