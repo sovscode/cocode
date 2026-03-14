@@ -2,9 +2,12 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ sid: number; qid: number; aid: number }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ sid: string; qid: string; aid: string }> }) {
   const supabase = createClient(await cookies())
-  const { sid: sessionId, qid: questionId, aid: answerId } = await params
+  const { sid, qid, aid } = await params
+  const sessionId = parseInt(sid)
+  const questionId = parseInt(qid)
+  const answerId = parseInt(aid)
 
   const { error } = await supabase
     .rpc("delete_answer", { sid_param: sessionId, qid_param: questionId, aid_param: answerId })
