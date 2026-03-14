@@ -71,7 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
     await context.workspaceState.update("cocodeSessionCode", sessionCode);
     
     provider.updateSessionCode(sessionCode);
-    provider.updateAnswers([{ id: 1, text: "for (let i = 0; i < array.length; i++) return true;" }])
+    provider.updateAnswers([{ id: 1, text: "for (let i = 0; i < array.length; i++) return true;" }, { id: 2, text: "array.forEach(element => {\n\treturn true;\n});"  }])
   };
 
   // register command to rejoin previous session
