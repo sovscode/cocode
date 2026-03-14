@@ -1,9 +1,14 @@
-import { assert } from "console";
 import { Answer, Question, QuestionPostResult } from "./types";
-import { AnswerViewProvider } from "./providers/answer-provider";
 import * as vscode from 'vscode';
 const { getUpdatedRanges } = require('vscode-position-tracking')
 
+type State = {
+    questionId: number;
+    originalQuestionContent: string;
+
+    editor: vscode.TextEditor;
+    range: DynamicRange | null;
+}
 
 class DynamicRange {
     private range_: vscode.Range;
@@ -43,71 +48,87 @@ class DynamicRange {
 }
 
 export class QuestionManager {
-    private activeQuestionId: number | null;
-    private activeRange: DynamicRange | null;
-    private activeEditor: vscode.TextEditor | null;
+
+    private state: State | null;
+
     private decorationHandler: DecorationHandler;
     private apiPostQuestion: (question: Omit<Question, "id">) => Promise<QuestionPostResult>
 
     constructor(apiPostQuestion: (question: Omit<Question, "id">) => Promise<QuestionPostResult>) {
-        this.activeRange = null;
-        this.activeQuestionId = null;
-        this.activeEditor = null;
+        this.state = null;
         this.decorationHandler = new DecorationHandler();
 
         this.apiPostQuestion = apiPostQuestion
 
         vscode.workspace.onDidChangeTextDocument(event => {
-            if (!this.activeRange) return
-            this.activeRange.update(event)
+            if (this.state === null) return;
+            this.state.range?.update(event)
         })
     }
 
     onRangeRemoved() {
-        vscode.window.showWarningMessage("Range removed. Pose a new question")
         this.endQuestion()
+        vscode.window.showWarningMessage("Range removed. Pose a new question")
+    }
+
+    getCurrentRangeContent(): string | null {
+        return null
     }
 
     async startQuestion(editor: vscode.TextEditor) {
         // send post request to backend to create question.
-        const content = editor.document.getText();
+        const fullFileContent = editor.document.getText();
         const range = editor.selection;
 
-        this.activeEditor = editor;
-        this.activeRange = new DynamicRange(
-            new vscode.Range(
-                editor.document.lineAt(range.start.line).range.start,
-                editor.document.lineAt(range.end.line).range.end
-            ), 
-            this.onRangeRemoved
-        );
-        this.decorationHandler.updateRange(editor, range);
-
-        const { id: qid } = await this.apiPostQuestion({
-            content,
+        const question = {
+            content: fullFileContent,
             fromLine: range.start.line + 1, // 1-indexing
             toLine: range.end.line + 2 // exclusive end line
-        })
+        }
 
-        this.activeQuestionId = qid;
+        console.log(question)
+
+        const { id: questionId } = await this.apiPostQuestion(question)
+
+        const fullLineRange = new vscode.Range(
+            editor.document.lineAt(range.start.line).range.start,
+            editor.document.lineAt(range.end.line).range.end
+        )
+
+        this.state = {
+            questionId,
+            editor,
+            range: new DynamicRange(fullLineRange, this.onRangeRemoved),
+            originalQuestionContent: editor.document.getText(fullLineRange)
+        }
+
+
+        this.decorationHandler.updateRange(editor, range);
     }
 
-    chooseAnswer(answer: Answer) {
-        if (!this.activeEditor || !this.activeRange) {
+    // answer = null -> unselect answer and go back to original buffer
+    chooseAnswer(answer: Answer | null) {
+        if (!this.state || !this.state.range) {
             vscode.window.showErrorMessage("No question has been asked")
             return;
         }
 
-        const range = this.activeRange.internalRange()
-        const editor = this.activeEditor;
+        const replacement = answer ? answer.text : this.state.originalQuestionContent;
+        const range = this.state.range?.internalRange()
+        const editor = this.state.editor;
 
-        this.activeEditor.edit(editBuilder => {
+        editor.edit(editBuilder => {
+            if (!this.state) {
+                vscode.window.showErrorMessage("No question has been asked")
+                return;
+            }
             this.decorationHandler.clear(editor)
-            this.activeRange = null;
-            editBuilder.replace(range, answer.text);
+            this.state.range = null;
+
+            editBuilder.replace(range, replacement);
         }).then(success => {
-            if (success && this.activeEditor) {       
-                const lines = answer.text.split(/\r?\n/);
+            if (success && this.state) {       
+                const lines = replacement.split(/\r?\n/);
                 const lineCount = lines.length;
                 const lastLineLength = lines[lineCount - 1].length;
 
@@ -121,8 +142,8 @@ export class QuestionManager {
                     lastLineLength
                 );         
 
-                this.activeRange = new DynamicRange(new vscode.Range(newStart, newEnd), this.onRangeRemoved); 
-                this.decorationHandler.updateRange(this.activeEditor, this.activeRange.internalRange())   
+                this.state.range = new DynamicRange(new vscode.Range(newStart, newEnd), this.onRangeRemoved); 
+                this.decorationHandler.updateRange(editor, this.state.range.internalRange())   
                 vscode.window.showInformationMessage("Code updated with the chosen answer!");
             } else {
                 vscode.window.showErrorMessage("Failed to apply the code change.");
@@ -131,15 +152,14 @@ export class QuestionManager {
     }
 
     endQuestion() {
-        this.activeRange = null;
-        this.activeQuestionId = null;
-        this.activeEditor = null;
-        if (this.activeEditor) 
-            this.decorationHandler.clear(this.activeEditor)
+        if (this.state?.editor) {
+            this.decorationHandler.clear(this.state.editor)
+        }
+        this.state = null;
     }
 
     getActiveQuestionId(): number | null {
-        return this.activeQuestionId ?? null
+        return this.state?.questionId ?? null
     }
 }
 

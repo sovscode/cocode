@@ -1,7 +1,6 @@
 // This method is called when your extension is deactivated
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { QuestionManager } from './questions';
 
 import { StartSessionViewProvider } from './providers/start-provider';
@@ -29,7 +28,12 @@ export function activate(context: vscode.ExtensionContext) {
   const answerViewPath = path.join(context.extensionPath, 'media', 'answerView.html');
 
   let answers: Answer[] = []
-  const onChooseAnswerInPanel = (id: number) => {
+  const onChooseAnswerInPanel = (id: number | null) => {
+    if (id === null) {
+      questionManager.chooseAnswer(null)
+      return;
+    }
+
     const idx = answers.findIndex(a => a.id == id)
     if (idx === -1) {
       vscode.window.showErrorMessage(`Answer with id ${id} doesn't exist.`);
@@ -40,7 +44,14 @@ export function activate(context: vscode.ExtensionContext) {
     questionManager.chooseAnswer(answer)
   }
 
-  const provider = new AnswerViewProvider(answerViewPath, context.extensionUri, onChooseAnswerInPanel);
+  const onCloseQuestionInPanel = () => {
+    questionManager.endQuestion()
+    answers = [];
+    provider.updateQuestionId(questionManager.getActiveQuestionId())
+    provider.updateAnswers([]);
+  }
+
+  const provider = new AnswerViewProvider(answerViewPath, context.extensionUri, onChooseAnswerInPanel, onCloseQuestionInPanel);
   const apiPostQuestion = async (question: Omit<Question, "id">) => {
     const sessionId = context.workspaceState.get("cocodeSessionId", null);
     const res = await fetch(`http://localhost:3000/api/sessions/${sessionId}/questions`, {
@@ -70,12 +81,13 @@ export function activate(context: vscode.ExtensionContext) {
   }
   
   setInterval(apiPollAnswers, ANSWER_POLL_TIMEOUT)
-
+  
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('cocodeAnswers', provider)
   )
-
+  let sessionJoined = false // FIX: do better
   let joinSession = async (sessionId: number, sessionCode: number) => {
+    sessionJoined = true
     
     // store the session id in workspace state
     await vscode.commands.executeCommand('setContext', 'cocode.inSession', true);
@@ -84,7 +96,9 @@ export function activate(context: vscode.ExtensionContext) {
     
     provider.updateSessionCode(sessionCode);
     provider.updateAnswers([])
+    provider.updateAnswers([])
   };
+
 
   // register command to rejoin previous session
   context.subscriptions.push(
@@ -125,7 +139,18 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (!sessionJoined) {
+        vscode.window.showWarningMessage('No active session')
+        return;
+      }
+
+      if (questionManager.getActiveQuestionId() !== null) {
+        vscode.window.showWarningMessage('There is an active unanswered question')
+        return
+      }
+
       await questionManager.startQuestion(editor);
+      provider.updateQuestionId(questionManager.getActiveQuestionId())
     })
   );
 
