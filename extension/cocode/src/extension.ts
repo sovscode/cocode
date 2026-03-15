@@ -45,14 +45,22 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
 
-  const viewPath = path.join(
+  const viewHtmlPath = path.join(
     context.extensionPath,
     "media",
     "view.html",
   );
 
+  const viewJsPath = path.join(
+    context.extensionPath,
+    "out",
+    "media",
+    "view.js"
+  )
+
   const sidepanelViewProvider = new ViewProvider(
-    viewPath,
+    viewHtmlPath,
+    viewJsPath,
     oldSessionExists && previousCode || null, 
     context.extensionUri,
     onChooseAnswerInPanel,

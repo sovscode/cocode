@@ -85,6 +85,10 @@
         overflow-y: auto;
     }
 
+    #answer-container:disabled {
+      display: none;
+    }
+
     .answer {
         position: relative;
         background: var(--vscode-sideBar-background);
@@ -168,6 +172,43 @@
         pointer-events: none;
     }
 
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: var(--vscode-button-background);
+    } 
+
+    .divider:hover {
+      color: var(--vscode-button-hoverBackground);
+      cursor: pointer;
+    }
+    
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      border: 0px;
+      border-bottom: 1px;
+      border-color: var(--vscode-button-background);
+      border-style: solid;
+    }
+
+    .divider:hover::after,
+    .divider:hover::before {
+      border-color: var(--vscode-button-hoverBackground);
+    }
+    
+    .divider::before {
+      margin-right: 10px;
+    }
+
+    .divider::after {
+      margin-left: 10px;
+    }
+
+
   </style>
 </head>
 <body>
@@ -199,6 +240,7 @@
     <button id="accept-answer-btn" disabled>Accept suggestion</button>
     <button id="reject-answer-btn">Reject suggestions</button>
     <h2 id="answers-header" style="margin-bottom: 0px">Suggestions: <span id="answer-count">0</span></h2>
+    <div class="divider"><i class="codicon codicon-eye-closed" id="eye-icon"></i></div>
     <div id="answer-container"></div>
   </div>
 
@@ -215,153 +257,8 @@
     </template>
 
   <script>
-    function showPage(pageId) {
-      document.getElementById('setup-page').classList.toggle('visible', pageId === 'setup-page');
-      document.getElementById('answer-page').classList.toggle('visible', pageId === 'answer-page');
-    }
-
-    const vscode = acquireVsCodeApi();
-
-    const startSessionBtn = document.getElementById('start-session-btn');
-    startSessionBtn.addEventListener('click', () => {
-        startSessionBtn.classList.add('loading');
-        startSessionBtn.textContent = "Loading...";
-        vscode.postMessage({ command: 'StartSession' });
-    });
-
-    document.getElementById('rejoin-session-btn')
-      .addEventListener('click', () => {
-        vscode.postMessage({ command: 'RejoinSession' });
-    });
-
-    let answers = []
-    let chosenAnswerId = null
-    let currentQuestionLanguage = null;
-    updateQuestion(null, null);
-
-    function updateQuestion(id, language) {
-      currentQuestionId = id
-      currentQuestionLanguage = language 
-      document.querySelector('#post-question-btn').disabled = currentQuestionId !== null
-      document.querySelector('#accept-answer-btn').disabled = currentQuestionId === null || chosenAnswerId === null
-      document.querySelector('#reject-answer-btn').disabled = currentQuestionId === null
-      document.querySelector('#answers-header').hidden = currentQuestionId === null
-    }
-
-    function updateChosenAnswer(id) {
-      chosenAnswerId = id;
-      const answerElements = document.querySelectorAll('.answer');
-      answerElements.forEach(elm => {
-        if (chosenAnswerId !== null && elm.id === `answer-${chosenAnswerId}`) {
-          elm.classList.add('chosen');
-        } else {
-          elm.classList.remove('chosen');
-        }
-      });
-      document.querySelector('#accept-answer-btn').disabled = chosenAnswerId === null
-    }
-
-    function chooseAnswer(id) {
-      if (chosenAnswerId === id) {
-        id = null; // unselect if clicking the already chosen answer
-      }
-      updateChosenAnswer(id);
-      vscode.postMessage({ command: 'chooseAnswer', id })
-    }
-
-    window.addEventListener('message', (event) => {
-      const { command, ...data } = event.data
-
-      switch (command) {
-        case 'showStartSessionPage':
-          showPage('setup-page')
-          break;
-
-        case 'showAnswerPage':
-          showPage('answer-page')
-
-        case 'setRejoinableSessionCode':
-          document.getElementById('rejoinable-session-code').style.display = 'block';
-          document.getElementById('rejoinable-session-code-value').textContent = data.code;
-          break;
-
-        case 'setSessionCode':
-          const element = document.getElementById('session-code-value');
-          element.textContent = data.code;
-          element.href = `{{COCODE_BASE_URL}}/answer?code=${data.code}`;
-          break;
-
-        case 'updateQuestion':
-          updateQuestion(data.id, data.language)
-          break;
-
-        case 'updateAnswers':
-          answers = data.answers
-
-          function trimAnswer(text) {
-            const lines = text.split('\n')
-            const minMargin = lines.map(l => l.length - l.trimStart().length)
-                                   .reduce((a, b) => Math.min(a, b))
-            return lines.map(l => l.substring(minMargin)).join("\n")
-          }
-
-          const elements = data.answers.map(answer => {
-            const elm = document.querySelector('#answer-template').content.firstElementChild.cloneNode(true)
-            elm.id = `answer-${answer.id}`
-            const codeElement = elm.querySelector('.answer-code');
-            codeElement.textContent = trimAnswer(answer.text);
-            codeElement.classList.add(`language-${currentQuestionLanguage}`);
-            elm.addEventListener('click', () => chooseAnswer(answer.id))
-            elm.querySelector('.answer-delete-icon').addEventListener('click', (e) => {
-              e.stopPropagation(); // prevent triggering the chooseAnswer event
-              vscode.postMessage({ command: 'deleteSuggestion', id: answer.id })
-            })
-            return elm
-          })
-
-          const container = document.querySelector('#answer-container')
-          container.innerHTML = ""
-          elements.forEach(elm => container.appendChild(elm))
-          updateChosenAnswer(data.chosenAnswerId);
-          hljs.highlightAll();
-
-          const answerCountElement = document.getElementById('answer-count');
-          answerCountElement.textContent = data.answers.length.toString();
-
-          break;
-
-        case 'enablePostQuestionButton':
-          const postQuestionBtn = document.getElementById('post-question-btn');
-          postQuestionBtn.classList.remove('loading');
-          postQuestionBtn.textContent = "Collaborate on selection";
-          break;
-
-        case 'enableStartSessionButton':
-          const startSessionBtn = document.getElementById('start-session-btn');
-          startSessionBtn.classList.remove('loading');
-          startSessionBtn.textContent = "Create Session";
-          break;
-      }
-    });
-
-    const postQuestionBtn = document.getElementById('post-question-btn');
-    postQuestionBtn.addEventListener('click', () => {
-      vscode.postMessage({ command: 'postQuestion' });
-      postQuestionBtn.classList.add('loading');
-      postQuestionBtn.textContent = "Loading..."
-    });
-
-    document.getElementById('accept-answer-btn')
-        .addEventListener('click', () => {
-      vscode.postMessage({ command: 'acceptSuggestion' });
-    });
-
-    document.getElementById('reject-answer-btn')
-        .addEventListener('click', () => {
-      vscode.postMessage({ command: 'rejectSuggestions' });
-    });
-
-
+    const COCODE_BASE_URL = "{{COCODE_BASE_URL}}";
+    {{COCODE_VIEWJS_FILE_CONTENTS}}
   </script>
 </body>
 </html>
