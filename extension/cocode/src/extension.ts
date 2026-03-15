@@ -126,7 +126,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     sidepanelViewProvider.updateSessionCode(sessionCode);
     sidepanelViewProvider.updateAnswers([]);
-    sidepanelViewProvider.showAnswerPage()
+    sidepanelViewProvider.showAnswerPage();
   };
 
   // register command to rejoin previous session
@@ -145,7 +145,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // register command to start a new  session
   context.subscriptions.push(
-    vscode.commands.registerCommand("cocode.startSession", async () => {
+    vscode.commands.registerCommand("cocode.startSession", async (callback) => {
       // call end point to get code, and sessionid
       const result = await fetch(`${baseUrl}/api/sessions`, {
         method: "POST",
@@ -156,6 +156,9 @@ export async function activate(context: vscode.ExtensionContext) {
       const { id: sessionId, code: sessionCode } =
         (await result.json()) as Session;
       joinSession(sessionId, sessionCode);
+      if (callback) {
+        callback();
+      }
     }),
   );
 

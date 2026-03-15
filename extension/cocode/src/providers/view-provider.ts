@@ -54,13 +54,13 @@ export class ViewProvider implements vscode.WebviewViewProvider {
     // Handle messages sent from the webview
     webviewView.webview.onDidReceiveMessage(({ command, ...data }) => {
       if (command === 'StartSession') {
-        vscode.commands.executeCommand('cocode.startSession');
+        vscode.commands.executeCommand('cocode.startSession', () => {
+          webviewView.webview.postMessage({ command: 'enableStartSessionButton' });
+        });
       } else if (command === 'RejoinSession') {
         vscode.commands.executeCommand('cocode.rejoinSession');
       } else if(command === 'postQuestion') {
         vscode.commands.executeCommand('cocode.postQuestion', (success: boolean) => {
-          // Re-enable the button and reset its text after the question is posted
-          console.log("Question posted callback called");
           webviewView.webview.postMessage({ command: 'enablePostQuestionButton' });
         });
       } else if (command === 'debug') {
