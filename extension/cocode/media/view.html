@@ -7,6 +7,15 @@
   <link href="{{CODEICONS_URI_MAGICAL_STRING}}" rel="stylesheet"/>
 
   <style>
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: var(--vscode-font-family);
+        color: var(--vscode-foreground);
+        overflow: hidden;
+    }
+
     #setup-page:not(.visible), #answer-page:not(.visible) { display: none }
 
     /* FOR THE SETUP PAGE */
@@ -176,7 +185,7 @@
   <div id="answer-page">
     <div class="centered">
         <p>Go to</p>
-        <h2>{{COCODE_BASE_URL}}</h2>
+        <h2>{{COCODE_BASE_SHORT_URL}}</h2>
         <div style="height:12px"></div>
         <p>Enter the code</p>
         <h1><a id="session-code-value"></a></h1>

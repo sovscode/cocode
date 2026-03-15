@@ -48,7 +48,8 @@ export class ViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtml()      
       .replaceAll("{{CODEICONS_URI_MAGICAL_STRING}}", codiconsUri.toString())
       .replaceAll("{{CODE_COMPLETION_STYLESHEET_MAGICAL_STRING}}", codeCompletionStylesheet)
-      .replaceAll("{{COCODE_BASE_URL}}", this.cocodeBaseUrl);
+      .replaceAll("{{COCODE_BASE_URL}}", this.cocodeBaseUrl)
+      .replaceAll("{{COCODE_BASE_SHORT_URL}}", this.cocodeBaseUrl.replaceAll("https://", ""));
 
     // Handle messages sent from the webview
     webviewView.webview.onDidReceiveMessage(({ command, ...data }) => {

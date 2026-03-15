@@ -71,7 +71,7 @@
       "properties": {
         "cocode.serverUrl": {
           "type": "string",
-          "default": "http://cocode.kasperskov.dev",
+          "default": "https://cocode.kasperskov.dev",
           "description": "Location of CoCode server"
         }
       }
