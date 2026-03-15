@@ -32,13 +32,13 @@ type Transition = (
     question: Omit<Question, 'id'>
   }
   | {
-    enum: 'submit suggestion',
+    enum: 'recieved suggestion',
     questionId: Question['id'],
-    answer: Answer,
+    sugg: Answer,
   }
   | {
     enum: 'inspect suggestion',
-    answerId: Answer['id']
+    suggId: Answer['id']
   }
   | {
     enum: 'modify question',
@@ -104,7 +104,7 @@ const stateMachine: StateMachine = {
   },
 
   'in session, taking suggestions': {
-    'submit suggestion': (state, trans) => {
+    'recieved suggestion': (state, trans) => {
       if (trans.questionId !== state.question.id) {
         // do nothing...
         return state;
@@ -126,7 +126,7 @@ const stateMachine: StateMachine = {
     'inspect suggestion': (state, trans) => {
       return {
         ...state,
-        inspectedSuggestionId: trans.answerId
+        inspectedSuggestionId: trans.suggId
       };
     },
 
@@ -135,8 +135,12 @@ const stateMachine: StateMachine = {
         ...state,
         enum: 'in session, idle'
       };
+    },
+
+    'reject suggestions': (state, _) => {
+      return { ...state, enum: 'in session, idle' }
     }
-  },
+  }
 }
 
 const doTransition = async (state: State, transition: Transition) => {
