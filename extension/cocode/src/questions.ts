@@ -105,8 +105,6 @@ export class QuestionManager {
             language: editor.document.languageId
         }
 
-        console.log(question)
-
         const { id: questionId } = await this.apiPostQuestion(question)
 
         const fullLineRange = new vscode.Range(
@@ -151,8 +149,6 @@ export class QuestionManager {
 
             editBuilder.replace(range, replacement);
         }).then(success => {
-            console.log("Edit success: ", success);
-            console.log("State", this.state);
             if (success && this.state) {       
                 const lines = replacement.split(/\r?\n/);
                 const lineCount = lines.length;

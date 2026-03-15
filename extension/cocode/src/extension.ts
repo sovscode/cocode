@@ -106,7 +106,6 @@ export async function activate(context: vscode.ExtensionContext) {
         table: "Answer",
       },
       async () => {
-        console.log("Answer table updated");
         await apiPollAnswers();
       },
     )
@@ -156,7 +155,6 @@ export async function activate(context: vscode.ExtensionContext) {
       });
       const { id: sessionId, code: sessionCode } =
         (await result.json()) as Session;
-      console.log(sessionId, sessionCode);
       joinSession(sessionId, sessionCode);
     }),
   );

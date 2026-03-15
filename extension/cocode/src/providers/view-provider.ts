@@ -125,7 +125,6 @@ export class ViewProvider implements vscode.WebviewViewProvider {
 
   updateAnswers(answers: Answer[]) {
     this.answers = answers;
-    console.log("Updating answers with currently chosen answer id: ", this.chosenAnswerId);
     this.sendAnswersToWebview();
   }
 
