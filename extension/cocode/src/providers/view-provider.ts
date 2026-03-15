@@ -16,15 +16,21 @@ export class ViewProvider implements vscode.WebviewViewProvider {
   private chosenAnswerId: number | null = null;
   private question: Question | null = null;
   private suggestionsVisible: boolean = false;
+  private jsFileContents: string
 
   constructor(
     htmlPath: string, 
+    jsPath: string,
     rejoinableSessionCode: number | null,
     extensionUri: vscode.Uri, 
     onChooseAnswer: (id: number | null) => void,
     cocodeBaseUrl: string,
   ) {
     this.html = fs.readFileSync(htmlPath, 'utf-8');
+    this.jsFileContents = fs.readFileSync(jsPath, 'utf-8')
+      .split('\n')
+      .filter(l => !l.includes('Object.defineProperty(exports') && !l.includes('use strict')) // remove stuff that tsc generates
+      .join('\n');
     this.extensionUri = extensionUri;
     this.onChooseAnswer = onChooseAnswer;
     this.rejoinableSessionCode = rejoinableSessionCode;
@@ -51,7 +57,8 @@ export class ViewProvider implements vscode.WebviewViewProvider {
       .replaceAll("{{CODEICONS_URI_MAGICAL_STRING}}", codiconsUri.toString())
       .replaceAll("{{CODE_COMPLETION_STYLESHEET_MAGICAL_STRING}}", codeCompletionStylesheet)
       .replaceAll("{{COCODE_BASE_URL}}", this.cocodeBaseUrl)
-      .replaceAll("{{COCODE_BASE_SHORT_URL}}", this.cocodeBaseUrl.replaceAll("https://", ""));
+      .replaceAll("{{COCODE_BASE_SHORT_URL}}", this.cocodeBaseUrl.replaceAll("https://", "").replaceAll("http://", ""))
+      .replaceAll("{{COCODE_VIEWJS_FILE_CONTENTS}}", this.jsFileContents);
 
     // Handle messages sent from the webview
     webviewView.webview.onDidReceiveMessage(({ command, ...data }) => {
