@@ -264,11 +264,6 @@
     window.addEventListener('message', (event) => {
       const { command, ...data } = event.data
 
-      vscode.postMessage({
-        command: 'debug',
-        msg: `Got command ${command} with data ${JSON.stringify(data)}`
-      })
-
       switch (command) {
         case 'showStartSessionPage':
           showPage('setup-page')
