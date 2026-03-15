@@ -97,6 +97,10 @@
         
     }
 
+    #answer-container.answers-visible .answer {
+      background: red;
+    }
+
     .answer-code {
         font-family: var(--vscode-editor-font-family);
         font-size: var(--vscode-editor-font-size);
@@ -228,6 +232,7 @@
 
     let answers = []
     let chosenAnswerId = null
+    let currentQuestionId = null
     let currentQuestionLanguage = null;
     updateQuestion(null, null);
 
@@ -271,6 +276,7 @@
 
         case 'showAnswerPage':
           showPage('answer-page')
+          break;
 
         case 'setRejoinableSessionCode':
           document.getElementById('rejoinable-session-code').style.display = 'block';
@@ -285,6 +291,15 @@
 
         case 'updateQuestion':
           updateQuestion(data.id, data.language)
+          break;
+
+        case 'setAnswerVisbility':
+          const container = document.querySelector('#answer-container')
+          if (data.visibility) {
+            container.classList.add('answers-visible')
+          } else {
+            container.classList.remove('answers-visible')
+          }
           break;
 
         case 'updateAnswers':
@@ -331,8 +346,6 @@
         .addEventListener('click', () => {
       vscode.postMessage({ command: 'rejectSuggestions' });
     });
-
-
   </script>
 </body>
 </html>

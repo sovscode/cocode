@@ -14,6 +14,7 @@ export class ViewProvider implements vscode.WebviewViewProvider {
   private sessionCode: number | null = null;
   private chosenAnswerId: number | null = null;
   private question: Question | null = null;
+  private answerVisibility: boolean = true
 
   constructor(
     htmlPath: string, 
@@ -116,6 +117,15 @@ export class ViewProvider implements vscode.WebviewViewProvider {
       });
     }
   }
+  
+  private sendAnswerVisibility() {
+    if (this._view) {
+      this._view.webview.postMessage({
+        command: 'setAnswerVisibility',
+        visibility: this.answerVisibility
+      })
+    }
+  }
 
   // Call this from anywhere in your extension to update the label
   updateSessionCode(code: number) {
@@ -144,6 +154,11 @@ export class ViewProvider implements vscode.WebviewViewProvider {
     if (this._view) {
       this._view.webview.postMessage({ command: 'showStartSessionPage' });
     }
+  }
+
+  toggleAnswerVisibility() {
+    this.answerVisibility = !this.answerVisibility
+    this.sendAnswerVisibility()
   }
 
   private _getHtml(): string {
