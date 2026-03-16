@@ -1,18 +1,22 @@
 import { Answer } from "../src/types";
 import { State } from "../src/statemachine"
 
-declare const COCODE_BASE_URL: string
-declare const acquireVsCodeApi: () => { postMessage: (_: any) => void }
-declare const hljs: { highlightAll: () => void }
+declare const COCODE_BASE_URL: string;
+declare const acquireVsCodeApi: () => { postMessage: (_: any) => void };
+declare const hljs: { highlightAll: () => void };
 
 function showPage(pageId: string) {
-  document.getElementById('setup-page')?.classList.toggle('visible', pageId === 'setup-page');
-  document.getElementById('answer-page')?.classList.toggle('visible', pageId === 'answer-page');
+  document
+    .getElementById("setup-page")
+    ?.classList.toggle("visible", pageId === "setup-page");
+  document
+    .getElementById("answer-page")
+    ?.classList.toggle("visible", pageId === "answer-page");
 }
 const vscode = acquireVsCodeApi();
 
 function debug(msg: string) {
-  vscode.postMessage({ command: 'debug', msg })
+  vscode.postMessage({ command: "debug", msg });
 }
 
 let suggestionsVisible = false;
@@ -27,8 +31,10 @@ const buttonListeners: { [K in string]: (btn: HTMLButtonElement) => void } = {
 }
 
 for (const [selector, func] of Object.entries(buttonListeners)) {
-for (const btn of Array.from(document.querySelectorAll<HTMLButtonElement>(selector))) {
-    btn.addEventListener('click', () => func(btn))
+  for (const btn of Array.from(
+    document.querySelectorAll<HTMLButtonElement>(selector),
+  )) {
+    btn.addEventListener("click", () => func(btn));
   }
 }
 
@@ -90,8 +96,8 @@ function setSessionCodeValue(code: number | null) {
 }
 
 
-window.addEventListener('message', (event) => {
-  const { command, ...data } = event.data
+window.addEventListener("message", (event) => {
+  const { command, ...data } = event.data;
 
   const startSessionBtn = document.getElementById('start-session-btn')!;
   const postQuestionBtn = document.getElementById('post-question-btn')!;

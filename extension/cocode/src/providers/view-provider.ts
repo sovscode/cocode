@@ -14,7 +14,7 @@ export class ViewProvider implements vscode.WebviewViewProvider {
   private requestUIUpdate: () => void
 
   constructor(
-    htmlPath: string, 
+    htmlPath: string,
     jsPath: string,
     extensionUri: vscode.Uri, 
     onChooseAnswer: (id: number | null) => void,
@@ -35,24 +35,39 @@ export class ViewProvider implements vscode.WebviewViewProvider {
   resolveWebviewView(webviewView: vscode.WebviewView) {
     this._view = webviewView;
 
-    const codiconsUri = webviewView.webview
-      .asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
+    const codiconsUri = webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.extensionUri,
+        "node_modules",
+        "@vscode/codicons",
+        "dist",
+        "codicon.css",
+      ),
+    );
 
     let codeCompletionStylesheet = null;
     if (vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark) {
       codeCompletionStylesheet = "atom-one-dark";
-    } else if (vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light) {
+    } else if (
+      vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light
+    ) {
       codeCompletionStylesheet = "atom-one-light";
     } else {
       codeCompletionStylesheet = "atom-one-dark";
     }
 
     webviewView.webview.options = { enableScripts: true };
-    webviewView.webview.html = this._getHtml()      
+    webviewView.webview.html = this._getHtml()
       .replaceAll("{{CODEICONS_URI_MAGICAL_STRING}}", codiconsUri.toString())
-      .replaceAll("{{CODE_COMPLETION_STYLESHEET_MAGICAL_STRING}}", codeCompletionStylesheet)
+      .replaceAll(
+        "{{CODE_COMPLETION_STYLESHEET_MAGICAL_STRING}}",
+        codeCompletionStylesheet,
+      )
       .replaceAll("{{COCODE_BASE_URL}}", this.cocodeBaseUrl)
-      .replaceAll("{{COCODE_BASE_SHORT_URL}}", this.cocodeBaseUrl.replaceAll("https://", "").replaceAll("http://", ""))
+      .replaceAll(
+        "{{COCODE_BASE_SHORT_URL}}",
+        this.cocodeBaseUrl.replaceAll("https://", "").replaceAll("http://", ""),
+      )
       .replaceAll("{{COCODE_VIEWJS_FILE_CONTENTS}}", this.jsFileContents);
 
     // Handle messages sent from the webview
@@ -88,6 +103,6 @@ export class ViewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtml(): string {
-	  return this.html;
+    return this.html;
   }
 }

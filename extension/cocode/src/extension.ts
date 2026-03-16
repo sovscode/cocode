@@ -4,15 +4,18 @@ import * as vscode from "vscode";
 
 import { Answer, Question, QuestionPostResult, Session } from "./types";
 
+import { EventSource } from "eventsource";
+import { QuestionManager } from "./questions";
 import { ViewProvider } from "./providers/view-provider";
-import { supabase } from "./supabase";
 import { isInSession, isTakingSuggestions, StateMachineHandler } from "./statemachine";
 import { EditorHandler } from "./editor-handler";
 
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
 // Fetch base url from env var
-const baseUrl = vscode.workspace.getConfiguration("cocode").get("serverUrl", "https://cocode.kasperskov.dev");
+const baseUrl = vscode.workspace
+  .getConfiguration("cocode")
+  .get("serverUrl", "https://cocode.kasperskov.dev");
 
 export async function activate(context: vscode.ExtensionContext) {
   console.log("CoCode started");
@@ -77,18 +80,15 @@ export async function activate(context: vscode.ExtensionContext) {
     stateMachineHandler.editorSelectSuggestion(id)
   };
 
-  const viewHtmlPath = path.join(
-    context.extensionPath,
-    "media",
-    "view.html",
-  );
+
+  const viewHtmlPath = path.join(context.extensionPath, "media", "view.html");
 
   const viewJsPath = path.join(
     context.extensionPath,
     "out",
     "media",
-    "view.js"
-  )
+    "view.js",
+  );
 
   const sidepanelViewProvider = new ViewProvider(
     viewHtmlPath,
@@ -102,7 +102,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       "cocodeSidepanelView",
-      sidepanelViewProvider
+      sidepanelViewProvider,
     ),
   );
 
@@ -115,26 +115,30 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const { session, question } = state
 
-    const result = await fetch(
-      `${baseUrl}/api/sessions/${session.id}/questions/${question.id}/answers`,
-    );
-
-    stateMachineHandler.handleServerSuggestionsUpdated((await result.json()) as Answer[])
+    fetch(`${baseUrl}/api/sessions/${sessionId}/questions/${question.id}/answers`)
+      .then((res) => {
+        return res.json();
+      })
+      .then((answers: Answer[]) => {
+        sidepanelViewProvider.updateAnswers(answers);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   };
 
-  supabase.channel("realtime-answers")
-    .on(
-      "postgres_changes",
-      {
-        event: "*", // Listen for INSERTs, UPDATEs, or DELETEs
-        schema: "public",
-        table: "Answer",
-      },
-      async () => {
-        await apiPollAnswers();
-      },
-    )
-    .subscribe();
+  function subscribeToAnswers(sid: string, qid: string) {
+    const url = `${baseUrl}/api/events/sessions/${sid}/questions/${qid}/answers`;
+    const sse = new EventSource(url);
+
+    // Listen for the custom 'answer-to-question' event we defined in our Next.js stream
+    const eventId = `answer-to-question:${qid}`;
+    sse.addEventListener(eventId, async (event) => {
+      apiPollAnswers().catch((err) => {
+        console.error(err);
+      });
+    });
+  }
 
   // register command to rejoin previous session
   context.subscriptions.push(
@@ -174,6 +178,25 @@ export async function activate(context: vscode.ExtensionContext) {
       } satisfies Omit<Question, "id">
 
       stateMachineHandler.editorPoseQuestion(question)
+      if (questionManager.getActiveQuestion()) {
+        vscode.window.showWarningMessage(
+          "There is an active unanswered question",
+        );
+        if (callback) {
+          callback(false);
+        }
+        return;
+      }
+
+      await questionManager.startQuestion(editor);
+      subscribeToAnswers(
+        context.workspaceState.get("cocodeSessionId", null) || "",
+        questionManager.getActiveQuestion()!.id,
+      );
+      sidepanelViewProvider.updateQuestion(questionManager.getActiveQuestion());
+      if (callback) {
+        callback(true);
+      }
     }),
   );
 
@@ -196,4 +219,4 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {}
+export function deactivate() { }
