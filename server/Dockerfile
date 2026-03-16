@@ -2,29 +2,35 @@
 
 # Stage 1: Install dependencies
 FROM node:22-alpine AS deps
-# Alpine needs libc6-compat for some Node packages and openssl for Prisma CLI
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
+# Enable pnpm via corepack (built into Node.js)
+RUN corepack enable pnpm
+
 # Copy package files and prisma schema
-COPY package.json package-lock.json ./
+# Make sure you copy pnpm-lock.yaml instead of package-lock.json!
+COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma 
 
-# Install dependencies (npm ci is preferred for CI/CD)
-RUN npm ci
+# Install dependencies using pnpm's equivalent of npm ci
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build the application
 FROM node:22-alpine AS builder
 WORKDIR /app
+
+# Enable pnpm here as well so we can use it to run the build script
+RUN corepack enable pnpm
+
 COPY --from=deps /app/node_modules ./node_modules
-# Copy the rest of the Next.js app code
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # Generate the Prisma client and build the Next.js standalone app
 RUN npx prisma generate 
-RUN npm run build
+RUN pnpm run build
 
 # Stage 3: Production server
 FROM node:22-alpine AS runner
@@ -44,8 +50,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy the Prisma folder so we can run database migrations on startup
+# Copy the Prisma folder AND the Prisma config file
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
 
 USER nextjs
 EXPOSE 3000

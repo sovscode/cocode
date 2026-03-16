@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "constrained-editor-plugin": "^1.4.0",
+    "dotenv": "^17.3.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.577.0",
     "monaco-editor": "^0.55.1",
@@ -39,7 +40,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.37",
     "@types/pg": "^8.18.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
