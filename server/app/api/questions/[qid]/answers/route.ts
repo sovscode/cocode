@@ -6,18 +6,17 @@ import { emitter } from "@/lib/eventEmitter";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ qid: string }> },
 ) {
   try {
-    const { id: idString } = await params;
-    if (!idString) {
+    const { qid: questionId } = await params;
+    if (!questionId) {
       return NextResponse.json(
         { error: "Missing question id" },
         { status: 400 },
       );
     }
 
-    const questionId = idString;
     const parsed = answerNoIdSchema.safeParse(
       await req.json().catch(() => null),
     );

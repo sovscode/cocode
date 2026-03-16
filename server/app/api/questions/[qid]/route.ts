@@ -4,11 +4,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ qid: string }> },
 ) {
   try {
-    const { id } = await params;
-    if (!id) {
+    const { qid } = await params;
+    if (!qid) {
       return NextResponse.json(
         { error: "Missing question id" },
         { status: 400 },
@@ -16,7 +16,7 @@ export async function GET(
     }
 
     const question = await prisma.question.findUnique({
-      where: { id },
+      where: { id: qid },
     });
 
     if (!question) {
