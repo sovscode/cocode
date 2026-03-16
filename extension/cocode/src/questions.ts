@@ -2,10 +2,8 @@ import { Answer, Question, QuestionPostResult } from "./types";
 import * as vscode from 'vscode';
 const { getUpdatedRanges } = require('vscode-position-tracking')
 
-type State = {
-    question: Question;
+type QuestionManagerState = {
     originalQuestionContent: string;
-
     document: vscode.TextDocument;
     range: DynamicRange | null;
 }
@@ -49,16 +47,13 @@ class DynamicRange {
 
 export class QuestionManager {
 
-    private state: State | null;
+    private state: QuestionManagerState | null;
 
     private decorationHandler: DecorationHandler;
-    private apiPostQuestion: (question: Omit<Question, "id">) => Promise<QuestionPostResult>
 
-    constructor(apiPostQuestion: (question: Omit<Question, "id">) => Promise<QuestionPostResult>) {
+    constructor() {
         this.state = null;
         this.decorationHandler = new DecorationHandler();
-
-        this.apiPostQuestion = apiPostQuestion;
 
         vscode.workspace.onDidChangeTextDocument(event => {
             if (this.state === null) return;
@@ -93,7 +88,7 @@ export class QuestionManager {
         return null
     }
 
-    async startQuestion(editor: vscode.TextEditor) {
+    initializeQuestionAndPrepareOrWhatever(editor: vscode.TextEditor): Omit<Question, "id"> {
         // send post request to backend to create question.
         const fullFileContent = editor.document.getText();
         const range = editor.selection;
@@ -105,21 +100,20 @@ export class QuestionManager {
             language: editor.document.languageId
         }
 
-        const { id: questionId } = await this.apiPostQuestion(question)
-
         const fullLineRange = new vscode.Range(
             editor.document.lineAt(range.start.line).range.start,
             editor.document.lineAt(range.end.line).range.end
         )
 
         this.state = {
-            question: { id: questionId, ...question },
             document: editor.document,
             range: new DynamicRange(fullLineRange, this.onRangeRemoved),
             originalQuestionContent: editor.document.getText(fullLineRange)
         }
 
         this.decorationHandler.updateRange(this.state.document, fullLineRange);
+
+        return question
     }
 
     // answer = null -> unselect answer and go back to original buffer
@@ -177,13 +171,6 @@ export class QuestionManager {
             this.decorationHandler.clear(this.state.document)
         }
         this.state = null;
-    }
-
-
-    getActiveQuestion(): Question | null {
-        if (!this.state) return null;
-
-        return this.state.question;
     }
 
     refreshDecorations() {

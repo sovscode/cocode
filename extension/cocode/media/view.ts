@@ -17,18 +17,10 @@ function debug(msg: string) {
 let suggestionsVisible = false;
 
 const buttonListeners: { [K in string]: (btn: HTMLButtonElement) => void } = {
-'#start-session-btn': btn => {
-  btn.classList.add('loading');
-  btn.textContent = "Loading...";
-  vscode.postMessage({ command: 'StartSession' });
-},
+'#start-session-btn': () => vscode.postMessage({ command: 'StartSession' }),
 '#rejoin-session-btn': () => vscode.postMessage({ command: 'RejoinSession' }),
 '.divider': () => vscode.postMessage( { command: 'updateSuggestionsVisible', visible: !suggestionsVisible }),
-'#post-question-btn': btn => {
-  vscode.postMessage({ command: 'postQuestion' });
-  btn.classList.add('loading');
-  btn.textContent = "Loading..."
-},
+'#post-question-btn': () => vscode.postMessage({ command: 'postQuestion' }),
 '#accept-answer-btn': () => vscode.postMessage({ command: 'acceptSuggestion' }),
 '#reject-answer-btn': () => vscode.postMessage({ command: 'rejectSuggestions' }),
 }
@@ -146,16 +138,26 @@ window.addEventListener('message', (event) => {
 
       break;
 
-    case 'enablePostQuestionButton':
+    case 'setPostQuestionButtonEnabled':
       const postQuestionBtn = document.getElementById('post-question-btn')!;
-      postQuestionBtn.classList.remove('loading');
-      postQuestionBtn.textContent = "Collaborate on selection";
+      if (data.enabled) {
+        postQuestionBtn.classList.remove('loading');
+        postQuestionBtn.textContent = "Collaborate on selection";
+      } else {
+        postQuestionBtn.classList.add('loading');
+        postQuestionBtn.textContent = "Loading...";
+      }
       break;
 
-    case 'enableStartSessionButton':
+    case 'setStartSessionButtonEnabled':
       const startSessionBtn = document.getElementById('start-session-btn')!;
-      startSessionBtn.classList.remove('loading');
-      startSessionBtn.textContent = "Create Session";
+      if (data.enabled) {
+        startSessionBtn.classList.remove('loading');
+        startSessionBtn.textContent = "Create Session";
+      } else {
+        startSessionBtn.classList.add('loading');
+        startSessionBtn.textContent = "Loading...";
+      }
       break;
   }
 });

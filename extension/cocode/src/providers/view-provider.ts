@@ -1,22 +1,17 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { Answer, Question } from '../types';
+import { State } from '../statemachine';
 
 export class ViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private html: string;
   private extensionUri: vscode.Uri;
   private cocodeBaseUrl: string;
-  private onChooseAnswer: (id: number | null) => void; // id = null means unselecting chosen answer
-
-  private rejoinableSessionCode: number | null = null;
-  private answers: Answer[] = [];
-  private blackListAnswerIds: Set<number> = new Set();
-  private sessionCode: number | null = null;
-  private chosenAnswerId: number | null = null;
-  private question: Question | null = null;
-  private suggestionsVisible: boolean = false;
   private jsFileContents: string
+
+  private onChooseAnswer: (id: number | null) => void; // id = null means unselecting chosen answer
+  private rejoinableSessionCode: number | null = null;
 
   constructor(
     htmlPath: string, 
@@ -63,135 +58,133 @@ export class ViewProvider implements vscode.WebviewViewProvider {
     // Handle messages sent from the webview
     webviewView.webview.onDidReceiveMessage(({ command, ...data }) => {
       if (command === 'StartSession') {
-        vscode.commands.executeCommand('cocode.startSession', () => {
-          webviewView.webview.postMessage({ command: 'enableStartSessionButton' });
-        });
+        vscode.commands.executeCommand('cocode.startSession');
       } else if (command === 'RejoinSession') {
         vscode.commands.executeCommand('cocode.rejoinSession');
       } else if(command === 'postQuestion') {
-        vscode.commands.executeCommand('cocode.postQuestion', (success: boolean) => {
-          webviewView.webview.postMessage({ command: 'enablePostQuestionButton' });
-        });
+        vscode.commands.executeCommand('cocode.postQuestion');
       } else if (command === 'debug') {
         vscode.window.showInformationMessage(`[WEBVIEW DEBUG]: ${data.msg}`);
       } else if (command === 'updateSuggestionsVisible') {
-        this.updateSuggestionVisible(data.visible);
+        vscode.commands.executeCommand('updateSuggestionsVisible', data.visible)
       } else if (command === 'chooseAnswer') {
-        this.chosenAnswerId = data.id;
         this.onChooseAnswer(data.id)
       } else if (command === 'acceptSuggestion') {
         vscode.commands.executeCommand('cocode.acceptSuggestion');
       } else if (command === 'rejectSuggestions') {
         vscode.commands.executeCommand('cocode.rejectSuggestions');
       } else if (command === 'deleteSuggestion') {
-        this.blackListAnswerIds.add(data.id)
-        this.sendAnswersToWebview();
         vscode.commands.executeCommand('cocode.deleteSuggestion', data.id)
       }
     });
 
-    webviewView.onDidChangeVisibility(() => {
-      this.updateView()
-    });
-
-    this.updateView()
+    webviewView.onDidChangeVisibility(() => { throw new Error("TODO") }); // TODO
   }
 
-  private updateView() {
-    if(this.sessionCode) {
-      this.showAnswerPage();
+  updateView(state: State) {
+    this.sendRejoinableSessionCodeToWebview()
+    switch (state.enum) {
+      case 'no session':
+        this.sendShowStartSessionPage()
+        this.sendSessionCodeToWebview(null);
+        this.sendQuestionDetailsToWebview(null, null);
+        this.sendAnswerDetailsToWebView([], null);
+        this.sendStartSessionButtonEnabled(false);
+        this.sendPostQuestionButtonEnabled(false);
+        break;
+
+      case 'creating session':
+        this.sendShowStartSessionPage()
+        this.sendSessionCodeToWebview(null);
+        this.sendQuestionDetailsToWebview(null, null);
+        this.sendAnswerDetailsToWebView([], null);
+        this.sendStartSessionButtonEnabled(false);
+        this.sendPostQuestionButtonEnabled(false);
+        break;
+
+      case 'in session, idle':
+        this.sendShowAnswerPage();
+        this.sendSessionCodeToWebview(state.session.code);
+        this.sendQuestionDetailsToWebview(null, null);
+        this.sendAnswerDetailsToWebView([], null);
+        this.sendStartSessionButtonEnabled(false);
+        this.sendPostQuestionButtonEnabled(true);
+        break;
+
+      case 'in session, loading question':
+        this.sendShowAnswerPage();
+        this.sendSessionCodeToWebview(state.session.code);
+        this.sendQuestionDetailsToWebview(null, null);
+        this.sendAnswerDetailsToWebView([], null);
+        this.sendStartSessionButtonEnabled(false);
+        this.sendPostQuestionButtonEnabled(false);
+        break;
+
+      case 'in session, taking suggestions':
+        this.sendShowAnswerPage();
+        this.sendSessionCodeToWebview(state.session.code)
+        this.sendQuestionDetailsToWebview(state.question.id, state.question.language)
+        this.sendAnswerDetailsToWebView(state.suggestions, state.selectedSuggestionId)
+        this.sendStartSessionButtonEnabled(false);
+        this.sendPostQuestionButtonEnabled(false);
+        break;
     }
-    this.sendRejoinableSessionCodeToWebview();
-    this.sendSessionCodeToWebview();
-    this.sendAnswersToWebview();
-    this.sendQuestionIdToWebview();
-    this.sendSuggestionsVisibleToWebview();
   }
 
   private sendRejoinableSessionCodeToWebview(): void {
     this._view?.webview?.postMessage({ command: 'setRejoinableSessionCode', code: this.rejoinableSessionCode })
   }
 
-  private sendSessionCodeToWebview(): void {
+  private sendSessionCodeToWebview(sessionCode: number | null): void {
     if (this._view) {
-      this._view.webview.postMessage({ command: 'setSessionCode', code: this.sessionCode });
+      this._view.webview.postMessage({ command: 'setSessionCode', code: sessionCode });
     }
   }
 
-  private sendAnswersToWebview(): void {
-
-    let filteredAnswers = this.answers.filter(
-      answer => !this.blackListAnswerIds.has(answer.id) 
-    );
-
+  private sendAnswerDetailsToWebView(answers: Answer[], chosenAnswerId: Answer["id"] | null): void {
     if (this._view) {
-      this._view.webview.postMessage({
-        command: 'updateAnswers',
-        answers: filteredAnswers,
-        chosenAnswerId: this.chosenAnswerId
-      });
+      this._view.webview.postMessage({ command: 'updateAnswers', answers, chosenAnswerId });
     }
   }
 
-  private sendQuestionIdToWebview(): void {
+  private sendQuestionDetailsToWebview(id: Question["id"] | null, language: Question["language"] | null): void {
     if (this._view) {
-      this._view.webview.postMessage({
-        command: 'updateQuestion',
-        id: this.question?.id || null,
-        language: this.question?.language || "javascript"
-      });
+      this._view.webview.postMessage({ command: 'updateQuestion', id, language, });
     }
   }
 
-  private sendSuggestionsVisibleToWebview(): void {
+  private sendStartSessionButtonEnabled(enabled: boolean): void {
     if (this._view) {
-      this._view.webview.postMessage({
-        command: 'updateSuggestionsVisible',
-        visible: this.suggestionsVisible
-      });
+      this._view.webview.postMessage({ command: 'setStartSessionButtonEnabled', enabled });
     }
   }
 
-  // Call this from anywhere in your extension to update the label
-  updateSessionCode(code: number) {
-    this.sessionCode = code;
-    this.sendSessionCodeToWebview();
+  private sendPostQuestionButtonEnabled(enabled: boolean): void {
+    if (this._view) {
+      this._view.webview.postMessage({ command: 'setPostQuestionButtonEnabled', enabled });
+    }
   }
 
-  updateAnswers(answers: Answer[]) {
-    this.answers = answers;
-    this.sendAnswersToWebview();
+  private sendSuggestionsVisibleToWebview(visible: boolean): void {
+    if (this._view) {
+      this._view.webview.postMessage({ command: 'updateSuggestionsVisible', visible });
+    }
   }
 
-  updateQuestion(question: Question | null) {
-    this.question = question;
-    this.chosenAnswerId = null;
-    this.blackListAnswerIds = new Set();
-    this.sendQuestionIdToWebview();
-  }
-
-  updateSuggestionVisible(visible: boolean) {
-    this.suggestionsVisible = visible;
-    this.sendSuggestionsVisibleToWebview();
-  }
-
-  showAnswerPage() {
+  private sendShowAnswerPage() {
     if (this._view) {
       this._view.webview.postMessage({ command: 'showAnswerPage' });
     }
   }
 
-  showStartSessionPage() {
+  private sendShowStartSessionPage() {
     if (this._view) {
       this._view.webview.postMessage({ command: 'showStartSessionPage' });
     }
   }
 
+
   private _getHtml(): string {
 	  return this.html;
-  }
-
-  getChosenAnswerId(): number | null {
-    return this.chosenAnswerId;
   }
 }
