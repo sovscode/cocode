@@ -2,22 +2,14 @@ import { createClient } from "@/utils/supabase/server";
 import { randomInt } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { prisma } from '@/lib/prisma';
 
 export async function POST() {
-  const supabase = createClient(await cookies());
   const code = randomInt(1000, 10000);
 
-  const { error, data } = await supabase
-    .from("Session")
-    .insert({ code })
-    .select("id")
-
-  if (error !== null) {
-    console.error("Supabase error", error)
-    return NextResponse.json(error, { status: 500 });
-  }
-
-  const [{ id }] = data
+  const { id } = await prisma.session.create({
+    data: { code }
+  })
 
   console.log(`Created new session with id ${id} and code ${code}`)
 
