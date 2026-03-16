@@ -1,31 +1,61 @@
 import { Answer, answerNoIdSchema } from "@/types/api";
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const supabase = createClient(await cookies());
-  const { id: idString } = await params
-  const id = parseInt(idString)
+import { prisma } from "@/lib/prisma";
 
-  const parseResult = answerNoIdSchema.safeParse(await req.json())
-  if (!parseResult.success) {
-    return NextResponse.json(parseResult.error, { status: 400 })
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id: idString } = await params;
+    if (!idString) {
+      return NextResponse.json(
+        { error: "Missing question id" },
+        { status: 400 },
+      );
+    }
+
+    const questionId = idString;
+    const parsed = answerNoIdSchema.safeParse(
+      await req.json().catch(() => null),
+    );
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", details: parsed.error.format() },
+        { status: 400 },
+      );
+    }
+
+    const answer: Omit<Answer, "id"> = parsed.data;
+
+    const question = await prisma.question.findUnique({
+      where: { id: questionId },
+    });
+    if (!question) {
+      return NextResponse.json(
+        { error: "Question not found" },
+        { status: 404 },
+      );
+    }
+
+    const created = await prisma.answer.create({
+      data: {
+        text: answer.text ?? null,
+        question: { connect: { id: questionId } },
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ id: created.id }, { status: 201 });
+  } catch (error) {
+    console.error("answers POST error", error);
+
+    const message =
+      error instanceof Error ? error.message : "Unknown server error";
+    return NextResponse.json(
+      { error: "Failed to create answer", message },
+      { status: 500 },
+    );
   }
-
-  const answer: Omit<Answer, "id"> = parseResult.data
-
-  const { error, data } = await supabase
-    .from("Answer")
-    .insert({
-      question_id: id,
-      text: answer.text
-    })
-
-  if (error !== null) {
-    console.error("Supabase error", error)
-    return NextResponse.json(error, { status: 500 });
-  }
-
-  return NextResponse.json({})
 }
