@@ -9,8 +9,6 @@ import { ViewProvider } from "./providers/view-provider";
 import { isInSession, isTakingSuggestions, StateMachineHandler } from "./statemachine";
 import { DocumentHandler } from "./document-handler";
 
-dotenv.config({ path: path.join(__dirname, "..", ".env") });
-
 // Fetch base url from env var
 const baseUrl = vscode.workspace
   .getConfiguration("cocode")
@@ -69,8 +67,8 @@ export async function activate(context: vscode.ExtensionContext) {
         });
 
         const { id: questionId } = (await res.json()) as QuestionPostResult;
-        stateMachineHandler.handleServerQuestionLoaded(questionId)
         subscribeToAnswers(sessionId, questionId);
+        stateMachineHandler.handleServerQuestionLoaded(questionId)
       },
       onDeleteSuggestion: (sessionId, questionId, suggId) => {
         fetch(`${baseUrl}/api/sessions/${sessionId}/questions/${questionId}/answers/${suggId}`, {
