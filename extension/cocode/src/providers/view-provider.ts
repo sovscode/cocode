@@ -11,6 +11,7 @@ export class ViewProvider implements vscode.WebviewViewProvider {
   private cocodeBaseUrl: string;
   private extensionContext: vscode.ExtensionContext
   private jsFileContents: string
+  private prevState_: State | null = null
 
   private onChooseAnswer: (id: Answer["id"] | null) => void; // id = null means unselecting chosen answer
   private requestUIUpdate: () => void
@@ -101,10 +102,13 @@ export class ViewProvider implements vscode.WebviewViewProvider {
       }
     });
 
-    webviewView.onDidChangeVisibility(() => { throw new Error("TODO") }); // TODO
+    webviewView.onDidChangeVisibility(() => { 
+      this.prevState_ && this.updateView(this.prevState_)
+    });
   }
 
   updateView(state: State) {
+    this.prevState_ = state
     const vs = {
       ...state,
       suggestionsVisible: this.extensionContext.workspaceState.get<boolean>("cocodeSuggestionsVisible", true)
