@@ -1,7 +1,5 @@
 services:
   web:
-    # Replace with your actual GitHub Container Registry path
-    # image: ghcr.io/logicontainer/cocode:latest
     container_name: cocode-app
     restart: unless-stopped
     ports:
@@ -12,12 +10,13 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NODE_ENV=production
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     build:
-      context: . # Tells Docker where the code is
-      dockerfile: Dockerfile # Tells Docker which file to use
+      context: .
+      dockerfile: Dockerfile
 
   db:
     image: postgres:15-alpine
@@ -29,11 +28,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Expose port only if you need external DB access, otherwise remove the ports block
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Optional: Auto-updater
+  # Auto-updater
   watchtower:
     image: containrrr/watchtower
     container_name: university-watchtower
