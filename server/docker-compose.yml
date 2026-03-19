@@ -18,6 +18,18 @@ services:
       context: .
       dockerfile: Dockerfile
 
+  migrator:
+    container_name: cocode-migrator
+    build:
+      context: .
+      target: builder
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: pnpm exec prisma migrate deploy
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:15-alpine
     container_name: cocode-postgres
@@ -44,7 +56,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 3600 --label-enable --cleanup
-    # Checks for updates every 1 hour (3600 seconds)
 
 volumes:
   pgdata:
