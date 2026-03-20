@@ -167,7 +167,7 @@ export interface ApiStrategy {
 }
 
 export class StateMachineHandler {
-  private apiStrategy: ApiStrategy
+  private stateMachine: StateMachine
 
   private state_: State
   private observers: StateMachineObserver[]
@@ -177,7 +177,7 @@ export class StateMachineHandler {
     apiStrategy: ApiStrategy
   ) {
     this.state_ = initialState
-    this.apiStrategy = apiStrategy
+    this.stateMachine = StateMachineHandler.initStateMachine(apiStrategy)
     this.observers = [];
   }
 
@@ -208,11 +208,11 @@ export class StateMachineHandler {
   handleServerSessionCreated(session: Session) { this.doTransition({ enum: 'SERVER: session created', session }) }
   handleServerSuggestionsUpdated(suggestions: Answer[]) { this.doTransition({ enum: 'SERVER: suggestions updated', suggestions }) }
 
-  private fullStateMachine() {
+  private static initStateMachine(apiStrategy: ApiStrategy) {
     const happyPathStateMachine = createStateMachine({
       'no session': {
         'EDITOR: create session': () => {
-          this.apiStrategy.onApiCreateSession();
+          apiStrategy.onApiCreateSession();
           return { enum: 'creating session' }
         },
         'EDITOR: rejoin session': (state, _) => {
@@ -240,7 +240,7 @@ export class StateMachineHandler {
   
       'in session, idle': {
         'EDITOR: pose question': (state, { question }) => {
-          this.apiStrategy.onApiPoseQuestion(state.session.id, question)
+          apiStrategy.onApiPoseQuestion(state.session.id, question)
           return {
             ...state,
             enum: 'in session, loading question',
@@ -297,7 +297,7 @@ export class StateMachineHandler {
             toLine: state.question.range.fromLine + newContent.split('\n').length
           }
   
-          this.apiStrategy.onEditorReplaceContent(state.question.range, newContent)
+          apiStrategy.onEditorReplaceContent(state.question.range, newContent)
   
           return {
             ...state,
@@ -311,7 +311,7 @@ export class StateMachineHandler {
         },
   
         'EDITOR: delete suggestion': (state, { suggId }) => {
-          this.apiStrategy.onApiDeleteSuggestion(state.session.id, state.question.id, suggId)
+          apiStrategy.onApiDeleteSuggestion(state.session.id, state.question.id, suggId)
           return {
             ...state,
             deletedSuggestionIds: [suggId, ...state.deletedSuggestionIds],
@@ -326,7 +326,7 @@ export class StateMachineHandler {
         },
   
         'EDITOR: reject suggestions': (state, _) => {
-          this.apiStrategy.onEditorReplaceContent(state.question.range, state.originalRangeContent)
+          apiStrategy.onEditorReplaceContent(state.question.range, state.originalRangeContent)
           return { ...state, enum: 'in session, idle' }
         },
   
@@ -427,7 +427,7 @@ export class StateMachineHandler {
   }
 
   private doTransition (transition: Transition) {
-    const func = this.fullStateMachine()[this.state_.enum][transition.enum] as FuncForStateAndTransition<typeof this.state_.enum, typeof transition.enum>
+    const func = this.stateMachine[this.state_.enum][transition.enum] as FuncForStateAndTransition<typeof this.state_.enum, typeof transition.enum>
     this.state_ = func(this.state_, transition)
     console.log(transition, this.state_)
     this.notifyStateUpdate()
