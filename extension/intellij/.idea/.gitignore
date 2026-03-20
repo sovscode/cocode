@@ -8,3 +8,6 @@
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+gradle.xml
+kotlinc.xml
+vcs.xml
