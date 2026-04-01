@@ -18,10 +18,11 @@ export default async function Page({
   }
 
   try {
-    const latestQuestion = await prisma.question.findFirst({
+    let latestQuestion = await prisma.question.findFirst({
       where: { session: { code } },
       orderBy: { createdAt: "desc" },
     });
+    if (latestQuestion) latestQuestion.isOpen = false;
 
     return <RealtimeAnswer code={code} initialQuestion={latestQuestion} />;
   } catch (error) {

@@ -11,6 +11,9 @@ export const questionSchema = z.object({
 });
 
 export const questionNoIdSchema = questionSchema.omit({ id: true });
+export const setAcceptedQuestionScheme = z.object({
+  acceptedAnswerId: idSchema,
+});
 
 export const answerSchema = z.object({
   id: idSchema,

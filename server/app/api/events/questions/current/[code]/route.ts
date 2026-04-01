@@ -18,7 +18,7 @@ export async function GET(
       // 1. Send an initial ping to establish connection
       controller.enqueue(
         encoder.encode(
-          `event: connected\ndata: {"status": "listening for answers for session with code: ${code}"}\n\n`,
+          `event: connected\ndata: {"status": "will notify you, when the current question changes for session with code: ${code}"}\n\n`,
         ),
       );
 
