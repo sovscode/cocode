@@ -1,9 +1,12 @@
 import { Answer, answerNoIdSchema } from "@/types/api";
 import { NextRequest, NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
 import { emitter } from "@/lib/eventEmitter";
+import { prisma } from "@/lib/prisma";
 
+/**
+ * Post an answer to a question.
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ qid: string }> },
@@ -36,6 +39,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Question not found" },
         { status: 404 },
+      );
+    }
+    if (!question.isOpen) {
+      return NextResponse.json(
+        { error: "Question is not open for answers" },
+        { status: 409 },
       );
     }
 
