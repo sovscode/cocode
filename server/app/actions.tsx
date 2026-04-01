@@ -2,9 +2,9 @@
 "use server";
 "force-dynamic";
 
+import { after } from "next/server";
 import { emitter } from "@/lib/eventEmitter";
 import { prisma } from "@/lib/prisma";
-import { after } from "next/server";
 
 export async function saveAnswerAction(text: string, questionId: string) {
   try {
@@ -29,13 +29,13 @@ export async function saveAnswerAction(text: string, questionId: string) {
       select: { id: true, text: true, questionId: true, createdAt: true },
     });
 
-    const eventId = `answer-to-question:${question.id}`
+    const eventId = `answer-to-question:${question.id}`;
     after(() => {
       emitter.emit(eventId, {
         message: "createdAnswer",
         createdAt: created.createdAt,
-      })
-    })
+      });
+    });
 
     return { success: true, data: created };
   } catch (error) {

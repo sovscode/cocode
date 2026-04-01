@@ -22,6 +22,11 @@ export default function Answer({
   code: number;
   question: QuestionModel;
 }) {
+  let hintMessage = "Edit the code below and submit when you're done.";
+  if (question && !question.isOpen) {
+    hintMessage = "The question is currently not open for answers.";
+  }
+
   const unchangedEditableInput = extractLineRange(
     question?.content,
     question?.fromLine,
@@ -41,7 +46,11 @@ export default function Answer({
 
   const handleSubmit = () => {
     setSubmitting(true);
-    saveAnswerAction(userAnswer, question.id)
+    fetch(`/api/questions/${question.id}/answers`, {
+      method: "POST",
+      body: JSON.stringify({ text: userAnswer }),
+    })
+      // saveAnswerAction(userAnswer, question.id)
       .then((res) => {
         setIsOpen(true);
         setLatestSubmittedAnswer(userAnswer);
@@ -70,7 +79,7 @@ export default function Answer({
       <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
         <div className="border border-zinc-100 rounded-xl overflow-hidden w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
           <p className="p-4 text-slate-400 text-center border-b">
-            Edit the code below and submit when you're done.
+            {hintMessage}
           </p>
           {question ? (
             <IDE

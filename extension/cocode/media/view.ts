@@ -1,5 +1,5 @@
 import { Answer } from "../src/types";
-import { State } from "../src/statemachine"
+import { State } from "../src/statemachine";
 import { ViewProviderState } from "../src/providers/view-provider";
 
 declare const COCODE_BASE_URL: string;
@@ -21,13 +21,15 @@ function debug(msg: string) {
 }
 
 const buttonListeners: { [K in string]: (btn: HTMLButtonElement) => void } = {
-'#start-session-btn': () => vscode.postMessage({ command: 'StartSession' }),
-'#rejoin-session-btn': () => vscode.postMessage({ command: 'RejoinSession' }),
-'.divider': () => vscode.postMessage( { command: 'toggleSuggestionsVisible' }),
-'#post-question-btn': () => vscode.postMessage({ command: 'postQuestion' }),
-'#accept-answer-btn': () => vscode.postMessage({ command: 'acceptSuggestion' }),
-'#reject-answer-btn': () => vscode.postMessage({ command: 'rejectSuggestions' }),
-}
+  "#start-session-btn": () => vscode.postMessage({ command: "StartSession" }),
+  "#rejoin-session-btn": () => vscode.postMessage({ command: "RejoinSession" }),
+  ".divider": () => vscode.postMessage({ command: "toggleSuggestionsVisible" }),
+  "#post-question-btn": () => vscode.postMessage({ command: "postQuestion" }),
+  "#accept-answer-btn": () =>
+    vscode.postMessage({ command: "acceptSuggestion" }),
+  "#reject-answer-btn": () =>
+    vscode.postMessage({ command: "rejectSuggestions" }),
+};
 
 for (const [selector, func] of Object.entries(buttonListeners)) {
   for (const btn of Array.from(
@@ -37,148 +39,169 @@ for (const [selector, func] of Object.entries(buttonListeners)) {
   }
 }
 
-function chooseAnswer(id: Answer["id"] | null) { 
-  vscode.postMessage({ command: 'chooseAnswer', id }) 
+function chooseAnswer(id: Answer["id"] | null) {
+  vscode.postMessage({ command: "chooseAnswer", id });
 }
 
 function disableStartSessionButton() {
-  const btn = document.getElementById('start-session-btn')!;
-  btn.classList.add('loading');
+  const btn = document.getElementById("start-session-btn")!;
+  btn.classList.add("loading");
   btn.textContent = "Loading...";
 }
 
 function enableStartSessionButton() {
-  const btn = document.getElementById('start-session-btn')!;
-  btn.classList.remove('loading');
+  const btn = document.getElementById("start-session-btn")!;
+  btn.classList.remove("loading");
   btn.textContent = "Create session";
 }
 
 function enablePostQuestionButton() {
-  const btn = document.getElementById('post-question-btn')!;
-  btn.classList.remove('loading');
+  const btn = document.getElementById("post-question-btn")!;
+  btn.classList.remove("loading");
   btn.textContent = "Collaborate on selection";
 }
 
 function disablePostQuestionButton() {
-  const btn = document.getElementById('post-question-btn')!;
-  btn.classList.add('loading');
+  const btn = document.getElementById("post-question-btn")!;
+  btn.classList.add("loading");
   btn.textContent = "Loading...";
 }
 
 function setSessionCodeValue(code: number | null) {
-  const element = document.querySelector<HTMLLinkElement>('#session-code-value')!;
+  const element = document.querySelector<HTMLLinkElement>(
+    "#session-code-value",
+  )!;
   element.textContent = code?.toString() ?? "NULL";
   element.href = `${COCODE_BASE_URL}/answer?code=${code}`;
 }
 
 function setSuggestionsVisible(visible: boolean) {
-  const eyeElm = document.getElementById('eye-icon')!;
-  document.getElementById('answer-container')!.style.display = visible ? 'flex' : 'none';
+  const eyeElm = document.getElementById("eye-icon")!;
+  document.getElementById("answer-container")!.style.display = visible
+    ? "flex"
+    : "none";
   if (visible) {
-    eyeElm.classList.remove('codicon-eye-closed');
-    eyeElm.classList.add('codicon-eye');
+    eyeElm.classList.remove("codicon-eye-closed");
+    eyeElm.classList.add("codicon-eye");
   } else {
-    eyeElm.classList.remove('codicon-eye');
-    eyeElm.classList.add('codicon-eye-closed');
+    eyeElm.classList.remove("codicon-eye");
+    eyeElm.classList.add("codicon-eye-closed");
   }
 }
 
-function renderAnswers(state: State & { enum: 'in session, taking suggestions' }) {
+function renderAnswers(
+  state: State & { enum: "in session, taking suggestions" },
+) {
   const trimAnswer = (text: string) => {
-    const lines = text.split('\n')
-    const minMargin = lines.map(l => l.length - l.trimStart().length)
-                           .reduce((a, b) => Math.min(a, b))
-    return lines.map(l => l.substring(minMargin)).join("\n")
-  }
+    const lines = text.split("\n");
+    const minMargin = lines
+      .map((l) => l.length - l.trimStart().length)
+      .reduce((a, b) => Math.min(a, b));
+    return lines.map((l) => l.substring(minMargin)).join("\n");
+  };
 
-  const elements = state.suggestions.map(answer => {
-    const elm: HTMLElement = document.querySelector<HTMLTemplateElement>('#answer-template')!.content.firstElementChild!.cloneNode(true) as HTMLElement
-    elm.id = `answer-${answer.id}`
-1
+  const elements = state.suggestions.map((answer) => {
+    const elm: HTMLElement = document
+      .querySelector<HTMLTemplateElement>("#answer-template")!
+      .content.firstElementChild!.cloneNode(true) as HTMLElement;
+    elm.id = `answer-${answer.id}`;
+    1;
     if (answer.id === state.selectedSuggestionId) {
-      elm.classList.add('chosen');
+      elm.classList.add("chosen");
     }
 
-    const codeElement = elm.querySelector('.answer-code')!;
+    const codeElement = elm.querySelector(".answer-code")!;
     codeElement.textContent = trimAnswer(answer.text);
     codeElement.classList.add(`language-${state.question.language}`);
-    elm.addEventListener('click', () => chooseAnswer(answer.id))
-    elm.querySelector('.answer-delete-icon')!.addEventListener('click', (e) => {
+    elm.addEventListener("click", () => chooseAnswer(answer.id));
+    elm.querySelector(".answer-delete-icon")!.addEventListener("click", (e) => {
       e.stopPropagation(); // prevent triggering the chooseAnswer event
-      vscode.postMessage({ command: 'deleteSuggestion', id: answer.id })
-    })
-    return elm
-  })
+      vscode.postMessage({ command: "deleteSuggestion", id: answer.id });
+    });
+    return elm;
+  });
 
-  const container = document.querySelector('#answer-container')!
-  elements.forEach(elm => container.appendChild(elm))
+  const container = document.querySelector("#answer-container")!;
+  elements.forEach((elm) => container.appendChild(elm));
   hljs.highlightAll();
 
-  const answerCountElement = document.getElementById('answer-count')!;
+  const answerCountElement = document.getElementById("answer-count")!;
   answerCountElement.textContent = state.suggestions.length.toString();
 }
 
 window.addEventListener("message", (event) => {
   const { command, ...data } = event.data;
 
-  if (command === 'updateState') {
-    const state = data.state as ViewProviderState
+  if (command === "updateState") {
+    const state = data.state as ViewProviderState;
 
-    setSuggestionsVisible(state.suggestionsVisible)
+    setSuggestionsVisible(state.suggestionsVisible);
 
     // TODO: CLEAN up
-    document.querySelector<HTMLButtonElement>('#post-question-btn')!.disabled = true
-    document.querySelector<HTMLButtonElement>('#accept-answer-btn')!.disabled = true
-    document.querySelector<HTMLButtonElement>('#reject-answer-btn')!.disabled = true
-    document.querySelector<HTMLHeadingElement>('#answers-header')!.hidden = true
+    document.querySelector<HTMLButtonElement>("#post-question-btn")!.disabled =
+      true;
+    document.querySelector<HTMLButtonElement>("#accept-answer-btn")!.disabled =
+      true;
+    document.querySelector<HTMLButtonElement>("#reject-answer-btn")!.disabled =
+      true;
+    document.querySelector<HTMLHeadingElement>("#answers-header")!.hidden =
+      true;
 
-    const container = document.querySelector('#answer-container')!
-    container.innerHTML = ""
+    const container = document.querySelector("#answer-container")!;
+    container.innerHTML = "";
 
     switch (state.enum) {
-      case 'no session':
-        showPage('setup-page');
+      case "no session":
+        showPage("setup-page");
         enableStartSessionButton();
         disablePostQuestionButton();
 
         if (state.rejoinableSession !== null) {
-          document.getElementById('rejoinable-session-code')!.style.display = 'block';
-          document.getElementById('rejoinable-session-code-value')!.textContent = state.rejoinableSession.code.toString();
+          document.getElementById("rejoinable-session-code")!.style.display =
+            "block";
+          document.getElementById(
+            "rejoinable-session-code-value",
+          )!.textContent = state.rejoinableSession.code.toString();
         }
 
         break;
 
-      case 'creating session':
-        showPage('setup-page');
+      case "creating session":
+        showPage("setup-page");
         disablePostQuestionButton();
         disableStartSessionButton();
-        break
+        break;
 
-      case 'in session, idle':
-        showPage('answer-page');
-        document.querySelector<HTMLButtonElement>('#post-question-btn')!.disabled = false
-        setSessionCodeValue(state.session.code)
+      case "in session, idle":
+        showPage("answer-page");
+        document.querySelector<HTMLButtonElement>(
+          "#post-question-btn",
+        )!.disabled = false;
+        setSessionCodeValue(state.session.code);
         disableStartSessionButton();
         enablePostQuestionButton();
         break;
 
-      case 'in session, taking suggestions':
-        showPage('answer-page');
-        setSessionCodeValue(state.session.code)
+      case "in session, taking suggestions":
+        showPage("answer-page");
+        setSessionCodeValue(state.session.code);
         disableStartSessionButton();
         disablePostQuestionButton();
 
-        document.querySelector<HTMLButtonElement>('#accept-answer-btn')!.disabled = state.selectedSuggestionId === null
-        document.querySelector<HTMLButtonElement>('#reject-answer-btn')!.disabled = false
-        document.querySelector<HTMLHeadingElement>('#answers-header')!.hidden = false
-        renderAnswers(state)
+        document.querySelector<HTMLButtonElement>(
+          "#accept-answer-btn",
+        )!.disabled = state.selectedSuggestionId === null;
+        document.querySelector<HTMLButtonElement>(
+          "#reject-answer-btn",
+        )!.disabled = false;
+        document.querySelector<HTMLHeadingElement>("#answers-header")!.hidden =
+          false;
+        renderAnswers(state);
         break;
     }
-
   } else {
-    debug(`Unknown command ${command}`)
+    debug(`Unknown command ${command}`);
   }
 });
 
-
-vscode.postMessage({ command: 'requestUIUpdate' })
+vscode.postMessage({ command: "requestUIUpdate" });
