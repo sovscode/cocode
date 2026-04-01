@@ -14,6 +14,7 @@ import Menubar from "./menubar";
 import { QuestionModel } from "@/lib/generated/prisma/models";
 import { saveAnswerAction } from "../actions";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function Answer({
   code,
@@ -38,7 +39,6 @@ export default function Answer({
   );
   const [resetKey, setResetKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
 
   const hasChanges = unchangedEditableInput != userAnswer;
   const canSubmit =
@@ -52,7 +52,9 @@ export default function Answer({
     })
       // saveAnswerAction(userAnswer, question.id)
       .then((res) => {
-        setIsOpen(true);
+        toast.success("Your submission has been sent to the presenter.", {
+          description: "Feel free to post another submission.",
+        });
         setLatestSubmittedAnswer(userAnswer);
       })
       .catch((err) =>
@@ -67,7 +69,7 @@ export default function Answer({
     setResetKey((key) => key + 1);
   };
   return (
-    <div className="w-full max-w-5xl mx-auto p-2 md:p-4 flex flex-col justify-center items-stretch gap-2 md:gap-4 h-screen">
+    <div className="flex flex-col items-stretch justify-center w-full h-screen max-w-5xl gap-2 p-2 mx-auto md:p-4 md:gap-4">
       <Menubar
         code={code}
         submitting={submitting}
@@ -78,7 +80,7 @@ export default function Answer({
       />
       <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
         <div className="border border-zinc-100 rounded-xl overflow-hidden w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
-          <p className="p-4 text-slate-400 text-center border-b">
+          <p className="p-4 text-center border-b text-slate-400">
             {hintMessage}
           </p>
           {question ? (
@@ -88,7 +90,7 @@ export default function Answer({
               onChangeUserAnswer={setUserAnswer}
             />
           ) : (
-            <div className="w-full h-full flex justify-center items-center">
+            <div className="flex items-center justify-center w-full h-full">
               <p className="text-slate-400">
                 Waiting for the presenter to post a question ...
               </p>
@@ -96,23 +98,6 @@ export default function Answer({
           )}
         </div>
       </div>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Submission Received</DialogTitle>
-            <DialogDescription>
-              Your submission has been sent to the presenter.
-              <br />
-              Feel free to post another submission.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
