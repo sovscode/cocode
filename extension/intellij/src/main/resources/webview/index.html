@@ -1,5 +1,65 @@
-<html>
-    <body>
-    <p style="color: white">Hello from webview</p>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/{{CODE_COMPLETION_STYLESHEET_MAGICAL_STRING}}.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <link href="{{CODEICONS_URI_MAGICAL_STRING}}" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="view.css">
+</head>
+<body>
+
+<div id="setup-page" class="visible">
+    <p>
+        Start a new live coding session to post questions,
+        and receive answers. Students can write answers
+        <a href="{{COCODE_BASE_URL}}">here</a>!
+    </p>
+    <button id="start-session-btn">Create Session</button>
+    <div id="rejoinable-session-code" style="display: none;">
+        <p id="rejoinable-session-code-text">Found existing session with code:
+            <span id="rejoinable-session-code-value"></span>
+        </p>
+        <button id="rejoin-session-btn">Rejoin Session</button>
+    </div>
+</div>
+
+<div id="answer-page">
+    <div class="centered">
+        <p>Go to</p>
+        <h2>{{COCODE_BASE_SHORT_URL}}</h2>
+        <div style="height:12px"></div>
+        <p>Enter the code</p>
+        <h1><a id="session-code-value"></a></h1>
+    </div>
+    <button id="post-question-btn">Collaborate on selection</button>
+    <button id="accept-answer-btn" disabled>Accept suggestion</button>
+    <button id="reject-answer-btn">Reject suggestions</button>
+    <h2 id="answers-header" style="margin-bottom: 0px">Suggestions: <span id="answer-count">0</span></h2>
+    <div class="divider"><i class="codicon codicon-eye-closed" id="eye-icon"></i></div>
+    <div id="answer-container"></div>
+</div>
+
+<template id="answer-template">
+    <div class="answer">
+        <pre><code class="answer-code"></code></pre>
+        <div class="answer-check-icon">
+            <i class="codicon codicon-check"></i>
+        </div>
+        <div class="answer-delete-icon">
+            <i class="codicon codicon-trash"></i>
+        </div>
+    </div>
+</template>
+
+<script>
+    const COCODE_BASE_URL = "{{COCODE_BASE_URL}}";
+    const PREVIOUS_SESSION_ID = "{{SESSION_ID}}";
+    const PREVIOUS_SESSION_CODE = {{SESSION_CODE}};
+</script>
+<script src="http://cocode/js/extension.js"></script>
+<script src="http://cocode/js/view.js"></script>
+<script src="http://cocode/js/statemachine.js"></script>
+</body>
 </html>

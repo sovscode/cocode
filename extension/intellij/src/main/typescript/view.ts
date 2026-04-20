@@ -1,0 +1,174 @@
+import { Answer } from "./types";
+import { State } from "./statemachine"
+import { ViewProviderState } from "./view-provider";
+import {
+    AcceptSuggestion, ChooseSuggestion, DeleteSuggestion,
+    PostQuestion,
+    RejectSuggestion,
+    RejoinSession,
+    StartSession,
+    ToggleSuggestionsVisible
+} from "./extension";
+
+declare const COCODE_BASE_URL: string;
+declare const hljs: { highlightAll: () => void };
+
+function showPage(pageId: string) {
+    document
+        .getElementById("setup-page")
+        ?.classList.toggle("visible", pageId === "setup-page");
+    document
+        .getElementById("answer-page")
+        ?.classList.toggle("visible", pageId === "answer-page");
+}
+
+const buttonListeners: { [K in string]: (btn: HTMLButtonElement) => void } = {
+    '#start-session-btn': () => StartSession(),
+    '#rejoin-session-btn': () => RejoinSession(),
+    '.divider': () => ToggleSuggestionsVisible(),
+    '#post-question-btn': () => PostQuestion(),
+    '#accept-answer-btn': () => AcceptSuggestion(),
+    '#reject-answer-btn': () => RejectSuggestion(),
+}
+
+for (const [selector, func] of Object.entries(buttonListeners)) {
+    for (const btn of Array.from(
+        document.querySelectorAll<HTMLButtonElement>(selector),
+    )) {
+        btn.addEventListener("click", () => func(btn));
+    }
+}
+
+function chooseAnswer(id: Answer["id"] | null) {
+    ChooseSuggestion(id);
+}
+
+function disableStartSessionButton() {
+    const btn = document.getElementById('start-session-btn')!;
+    btn.classList.add('loading');
+    btn.textContent = "Loading...";
+}
+
+function enableStartSessionButton() {
+    const btn = document.getElementById('start-session-btn')!;
+    btn.classList.remove('loading');
+    btn.textContent = "Create session";
+}
+
+function enablePostQuestionButton() {
+    const btn = document.getElementById('post-question-btn')!;
+    btn.classList.remove('loading');
+    btn.textContent = "Collaborate on selection";
+}
+
+function disablePostQuestionButton() {
+    const btn = document.getElementById('post-question-btn')!;
+    btn.classList.add('loading');
+    btn.textContent = "Loading...";
+}
+
+function setSessionCodeValue(code: number | null) {
+    const element = document.querySelector<HTMLLinkElement>('#session-code-value')!;
+    element.textContent = code?.toString() ?? "NULL";
+    element.href = `${COCODE_BASE_URL}/answer?code=${code}`;
+}
+
+function setSuggestionsVisible(visible: boolean) {
+    const eyeElm = document.getElementById('eye-icon')!;
+    document.getElementById('answer-container')!.style.display = visible ? 'flex' : 'none';
+    if (visible) {
+        eyeElm.classList.remove('codicon-eye-closed');
+        eyeElm.classList.add('codicon-eye');
+    } else {
+        eyeElm.classList.remove('codicon-eye');
+        eyeElm.classList.add('codicon-eye-closed');
+    }
+}
+
+function renderAnswers(state: State & { enum: 'in session, taking suggestions' }) {
+    const trimAnswer = (text: string) => {
+        const lines = text.split('\n')
+        const minMargin = lines.map(l => l.length - l.trimStart().length)
+            .reduce((a, b) => Math.min(a, b))
+        return lines.map(l => l.substring(minMargin)).join("\n")
+    }
+
+    const elements = state.suggestions.map(answer => {
+        const elm: HTMLElement = document.querySelector<HTMLTemplateElement>('#answer-template')!.content.firstElementChild!.cloneNode(true) as HTMLElement
+        elm.id = `answer-${answer.id}`
+        1
+        if (answer.id === state.selectedSuggestionId) {
+            elm.classList.add('chosen');
+        }
+
+        const codeElement = elm.querySelector('.answer-code')!;
+        codeElement.textContent = trimAnswer(answer.text);
+        codeElement.classList.add(`language-${state.question.language}`);
+        elm.addEventListener('click', () => chooseAnswer(answer.id))
+        elm.querySelector('.answer-delete-icon')!.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent triggering the chooseAnswer event
+            DeleteSuggestion(answer.id);
+        })
+        return elm
+    })
+
+    const container = document.querySelector('#answer-container')!
+    elements.forEach(elm => container.appendChild(elm))
+    hljs.highlightAll();
+
+    const answerCountElement = document.getElementById('answer-count')!;
+    answerCountElement.textContent = state.suggestions.length.toString();
+}
+
+export function UpdateView(state : ViewProviderState) {
+    setSuggestionsVisible(state.suggestionsVisible)
+
+    // TODO: CLEAN up
+    document.querySelector<HTMLButtonElement>('#post-question-btn')!.disabled = true
+    document.querySelector<HTMLButtonElement>('#accept-answer-btn')!.disabled = true
+    document.querySelector<HTMLButtonElement>('#reject-answer-btn')!.disabled = true
+    document.querySelector<HTMLHeadingElement>('#answers-header')!.hidden = true
+
+    const container = document.querySelector('#answer-container')!
+    container.innerHTML = ""
+
+    switch (state.enum) {
+        case 'no session':
+            showPage('setup-page');
+            enableStartSessionButton();
+            disablePostQuestionButton();
+
+            if (state.rejoinableSession !== null) {
+                document.getElementById('rejoinable-session-code')!.style.display = 'block';
+                document.getElementById('rejoinable-session-code-value')!.textContent = state.rejoinableSession.code.toString();
+            }
+
+            break;
+
+        case 'creating session':
+            showPage('setup-page');
+            disablePostQuestionButton();
+            disableStartSessionButton();
+            break
+
+        case 'in session, idle':
+            showPage('answer-page');
+            document.querySelector<HTMLButtonElement>('#post-question-btn')!.disabled = false
+            setSessionCodeValue(state.session.code)
+            disableStartSessionButton();
+            enablePostQuestionButton();
+            break;
+
+        case 'in session, taking suggestions':
+            showPage('answer-page');
+            setSessionCodeValue(state.session.code)
+            disableStartSessionButton();
+            disablePostQuestionButton();
+
+            document.querySelector<HTMLButtonElement>('#accept-answer-btn')!.disabled = state.selectedSuggestionId === null
+            document.querySelector<HTMLButtonElement>('#reject-answer-btn')!.disabled = false
+            document.querySelector<HTMLHeadingElement>('#answers-header')!.hidden = false
+            renderAnswers(state)
+            break;
+    }
+}

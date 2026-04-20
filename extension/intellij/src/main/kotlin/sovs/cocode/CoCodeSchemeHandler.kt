@@ -19,8 +19,7 @@ class CoCodeSchemeHandler : CefResourceHandler {
     ): Boolean {
         val url = cefRequest.url ?: return false
 
-        println(url)
-        val pathToResource = url.replace("http://cocode", "webview/")
+        val pathToResource = url.replace("http://cocode", "webview/dist/")
         val resourceUrl = javaClass.classLoader.getResource(pathToResource)
 
         if (resourceUrl != null) {

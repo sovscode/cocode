@@ -1,0 +1,199 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--vscode-font-family); /*should be changed */
+    color: var(--vscode-foreground);
+    overflow: hidden;
+}
+
+#setup-page:not(.visible), #answer-page:not(.visible) { display: none }
+
+/* FOR THE SETUP PAGE */
+#setup-page {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#setup-page button {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+}
+
+#setup-page button:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+#session-code-value {
+    font-weight: bold;
+}
+
+/* FOR THE ANSWERS PAGE */
+#answer-page {
+    padding: 16px;
+    padding-top: 0px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100vh;
+    overflow: hidden;
+}
+button {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+}
+button:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+button:disabled {
+    display: none;
+}
+
+#session-code {
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+#answer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    user-select: none;
+    overflow-y: auto;
+}
+
+#answer-container:disabled {
+    display: none;
+}
+
+.answer {
+    position: relative;
+    background: var(--vscode-sideBar-background);
+    color: var(--vscode-foreground);
+    border: 1px solid var(--vscode-widget-border);
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+
+}
+
+.answer-code {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+    /* Keeps code snippets from wrapping weirdly */
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.answer.chosen {
+    background: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+}
+
+.answer-check-icon {
+    display: none
+}
+
+.answer.chosen .answer-check-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 4px;
+}
+
+.answer-delete-icon {
+    display: none;
+}
+
+.answer:hover .answer-delete-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 4px;
+}
+
+.answer-delete-icon:hover {
+    color: var(--vscode-errorForeground);
+}
+
+.answer:hover {
+    background: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+}
+
+.answer:active {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.centered {
+    width: 100%;
+    text-align: center;
+    padding-bottom: 12px;
+}
+
+.centered * {
+    padding: 0px;
+    margin: 0px;
+}
+
+#start-session-btn.loading, #post-question-btn.loading {
+    background: var(--vscode-button-secondaryBackground);
+    pointer-events: none;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--vscode-button-background);
+}
+
+.divider:hover {
+    color: var(--vscode-button-hoverBackground);
+    cursor: pointer;
+}
+
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    border: 0px;
+    border-bottom: 1px;
+    border-color: var(--vscode-button-background);
+    border-style: solid;
+}
+
+.divider:hover::after,
+.divider:hover::before {
+    border-color: var(--vscode-button-hoverBackground);
+}
+
+.divider::before {
+    margin-right: 10px;
+}
+
+.divider::after {
+    margin-left: 10px;
+}

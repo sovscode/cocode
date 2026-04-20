@@ -1,0 +1,437 @@
+import { Range, Answer, Question, Session } from './types';
+
+export type TakingSuggestionsState = {
+    enum: 'in session, taking suggestions',
+
+    originalRangeContent: string;
+
+    question: Question;
+    suggestions: Answer[];
+    deletedSuggestionIds: Answer["id"][];
+
+    selectedSuggestionId: Answer['id'] | null;
+}
+
+export type InSessionStates = {
+    session: Session
+} & (
+    | { enum: 'in session, idle' }
+    | {
+    enum: 'in session, loading question',
+    question: Omit<Question, "id">
+}
+    | TakingSuggestionsState
+    | Omit<TakingSuggestionsState, "enum"> & {
+    enum: 'in session, editor is replacing content'
+}
+    )
+
+export type State = (
+    | { enum: 'no session', rejoinableSession: Session | null }
+    | { enum: 'creating session' }
+    | InSessionStates
+    )
+
+type StateEnum = State['enum']
+
+type Transition = (
+    | { enum: 'EDITOR: create session' }
+    | { enum: 'EDITOR: rejoin session' }
+    | {
+    enum: 'SERVER: session created',
+    session: Session
+}
+    | {
+    enum: 'EDITOR: pose question',
+    question: Omit<Question, 'id'>
+}
+    | {
+    enum: 'SERVER: question loaded',
+    questionId: Question["id"]
+}
+    | {
+    enum: 'SERVER: suggestions updated',
+    suggestions: Answer[],
+}
+    | {
+    enum: 'EDITOR: select suggestion',
+    suggId: Answer['id'] | null // selecting null means unselecting
+}
+    | {
+    enum: 'EDITOR: delete suggestion',
+    suggId: Answer["id"]
+}
+    | {
+    enum: 'EDITOR: modify range',
+    newRange: Range
+}
+    | {
+    enum: 'EDITOR: accept selected suggestion'
+}
+    | {
+    enum: 'EDITOR: end session'
+}
+    | {
+    enum: 'EDITOR: reject suggestions'
+}
+    | {
+    enum: 'EDITOR: replaced content'
+}
+    )
+
+type TransitionEnum = Transition['enum']
+
+type FuncForStateAndTransition<
+    S extends StateEnum,
+    T extends TransitionEnum,
+> =
+    ((state: State & { enum: S }, t: Transition & { enum: T }) => State)
+
+type MachineBase = Record<StateEnum, any>
+
+type ValidMachine<M extends MachineBase> = {
+    [S in StateEnum]: {
+        [T in keyof M[S]]: T extends TransitionEnum ? FuncForStateAndTransition<S, T> : never
+    }
+}
+
+type RemainingMachine<M extends MachineBase> = {
+    [S in StateEnum]: {
+        [T in Exclude<TransitionEnum, keyof M[S]>]: FuncForStateAndTransition<S, T>
+    }
+}
+
+function createStateMachine<M extends MachineBase>(
+    machine: M & ValidMachine<M>
+) {
+    return machine;
+}
+
+function completeMachine<M extends MachineBase>(
+    machine: M & ValidMachine<M>,
+    remainder: RemainingMachine<M>
+): StateMachine {
+    let fullMachine = {}
+    const stateEnums: readonly StateEnum[] = Object.keys(machine) as readonly StateEnum[]
+    for (const s of stateEnums) {
+        fullMachine = {
+            ...fullMachine,
+            [s]: {
+                ...remainder[s],
+                ...machine[s]
+            }
+        }
+    }
+    return fullMachine as M & RemainingMachine<M>
+}
+
+type StateMachine = {
+    [S in StateEnum]: {
+        [T in TransitionEnum]: FuncForStateAndTransition<S, T>;
+    }
+}
+
+export function isInSession(state: State) {
+    return 'in session, idle' === state.enum ||
+        'in session, loading question' === state.enum ||
+        'in session, taking suggestions' === state.enum
+
+}
+
+export function isTakingSuggestions(state: State) {
+    return state.enum === "in session, taking suggestions"
+}
+
+export function getQuestionOriginalRangeContent(state: State & { enum: 'in session, taking suggestions' }): string {
+    return state.originalRangeContent
+}
+
+export function getCurrentSuggestion(state: State): Answer | null {
+    if (state.enum !== "in session, taking suggestions" || state.selectedSuggestionId === null) {
+        return null;
+    }
+
+    const sugg = state.suggestions.find(sugg => sugg.id === state.selectedSuggestionId)
+    return sugg ?? null
+}
+
+export interface StateMachineObserver {
+    onStateUpdate: (state: State) => void
+}
+
+export interface ApiStrategy {
+    onApiCreateSession: () => void;
+    onApiPoseQuestion: (sessionId: Session["id"], question: Omit<Question, "id">) => void;
+    onApiDeleteSuggestion: (sessionId: Session["id"], questinoId: Question["id"], suggId: Answer["id"]) => void;
+    onEditorReplaceContent: (range: Range, newContent: string) => void;
+}
+
+export class StateMachineHandler {
+    private apiStrategy: ApiStrategy
+
+    private state_: State
+    private observers: StateMachineObserver[]
+
+    constructor(
+        initialState: State,
+        apiStrategy: ApiStrategy
+    ) {
+        this.state_ = initialState
+        this.apiStrategy = apiStrategy
+        this.observers = [];
+    }
+
+    attach(observer: StateMachineObserver) {
+        this.observers.push(observer)
+    }
+
+    private notifyStateUpdate() {
+        this.observers.forEach(obs => obs.onStateUpdate(this.state_))
+    }
+
+    forceUpdate() { return this.notifyStateUpdate() }
+
+    editorCreateSession() { this.doTransition({ enum: 'EDITOR: create session' }) }
+    editorRejoinSession() { this.doTransition({ enum: 'EDITOR: rejoin session' }) }
+    editorPoseQuestion(question: Omit<Question, "id">) { this.doTransition({ enum: 'EDITOR: pose question', question }) }
+    editorModifyRange(newRange: Range) { this.doTransition({ enum: 'EDITOR: modify range', newRange })}
+    editorSelectSuggestion(suggId: Answer["id"] | null) {
+        this.doTransition({ enum: 'EDITOR: select suggestion', suggId })
+    }
+    editorReplacedContent() { this.doTransition({ enum: 'EDITOR: replaced content' }) }
+    editorAcceptSelectedSuggestion() { this.doTransition({ enum: 'EDITOR: accept selected suggestion' }) }
+    editorRejectSuggestions() { this.doTransition({ enum: 'EDITOR: reject suggestions' }) }
+    editorDeleteSuggestion(suggId: Answer["id"]) { this.doTransition({ enum: 'EDITOR: delete suggestion', suggId }) }
+    editorEndSession() { this.doTransition({ enum: 'EDITOR: end session' }) }
+
+    handleServerQuestionLoaded(questionId: Question["id"]) { this.doTransition({ enum: 'SERVER: question loaded', questionId }) }
+    handleServerSessionCreated(session: Session) { this.doTransition({ enum: 'SERVER: session created', session }) }
+    handleServerSuggestionsUpdated(suggestions: Answer[]) { this.doTransition({ enum: 'SERVER: suggestions updated', suggestions }) }
+
+    private fullStateMachine() {
+        const happyPathStateMachine = createStateMachine({
+            'no session': {
+                'EDITOR: create session': () => {
+                    this.apiStrategy.onApiCreateSession();
+                    return { enum: 'creating session' }
+                },
+                'EDITOR: rejoin session': (state, _) => {
+                    if (!state.rejoinableSession) {
+                        console.error("No rejoinable session")
+                        return state;
+                    }
+
+                    return {
+                        enum: 'in session, idle',
+                        session: state.rejoinableSession,
+                    }
+                },
+                'EDITOR: end session': ({ rejoinableSession }, _) => ({ enum: 'no session', rejoinableSession })
+            },
+
+            'creating session': {
+                'SERVER: session created': (_, { session }) => {
+                    return {
+                        enum: 'in session, idle',
+                        session
+                    }
+                },
+            },
+
+            'in session, idle': {
+                'EDITOR: pose question': (state, { question }) => {
+                    this.apiStrategy.onApiPoseQuestion(state.session.id, question)
+                    return {
+                        ...state,
+                        enum: 'in session, loading question',
+                        question,
+                    }
+                },
+                'EDITOR: end session': ({ session }, _) => ({ enum: 'no session', rejoinableSession: session })
+            },
+
+            'in session, loading question': {
+                'SERVER: question loaded': (state, { questionId }) => {
+                    return {
+                        ...state,
+                        enum: 'in session, taking suggestions',
+                        originalRangeContent: state.question.content.split('\n').slice(state.question.range.fromLine - 1, state.question.range.toLine - 1).join('\n'),
+                        suggestions: [],
+                        deletedSuggestionIds: [],
+                        selectedSuggestionId: null,
+                        question: { ...state.question, id: questionId }
+                    }
+                },
+                'EDITOR: end session': ({ session }, _) => ({ enum: 'no session', rejoinableSession: session })
+            },
+
+            'in session, taking suggestions': {
+                'SERVER: suggestions updated': (state, { suggestions }) => {
+                    const effectiveSuggestions = suggestions.filter(sugg => !state.deletedSuggestionIds.includes(sugg.id))
+                    const selectedGone = !effectiveSuggestions.some(sugg => sugg.id === state.selectedSuggestionId)
+                    // could mean editor should switch back
+                    return {
+                        ...state,
+                        suggestions: effectiveSuggestions,
+                        selectedSuggestionId: selectedGone ? null : state.selectedSuggestionId
+                    };
+                },
+
+                'EDITOR: modify range': (state, { newRange }) => {
+                    return {
+                        ...state,
+                        question: {
+                            ...state.question,
+                            range: newRange
+                        }
+                    }
+                },
+
+                'EDITOR: select suggestion': (state, { suggId }) => {
+                    const { selectedSuggestionId } = state
+                    const newId = (suggId === null || suggId === selectedSuggestionId) ? null : suggId
+                    const suggestion = (suggId && state.suggestions.find(s => s.id == newId))
+                    const newContent = suggestion ? suggestion.text : getQuestionOriginalRangeContent(state)
+                    const newRange = {
+                        fromLine: state.question.range.fromLine,
+                        toLine: state.question.range.fromLine + newContent.split('\n').length
+                    }
+
+                    this.apiStrategy.onEditorReplaceContent(state.question.range, newContent)
+
+                    return {
+                        ...state,
+                        question: {
+                            ...state.question,
+                            range: newRange
+                        },
+                        selectedSuggestionId: newId,
+                        enum: 'in session, editor is replacing content'
+                    };
+                },
+
+                'EDITOR: delete suggestion': (state, { suggId }) => {
+                    this.apiStrategy.onApiDeleteSuggestion(state.session.id, state.question.id, suggId)
+                    return {
+                        ...state,
+                        deletedSuggestionIds: [suggId, ...state.deletedSuggestionIds],
+                    }
+                },
+
+                'EDITOR: accept selected suggestion': (state, _) => {
+                    return {
+                        ...state,
+                        enum: 'in session, idle'
+                    };
+                },
+
+                'EDITOR: reject suggestions': (state, _) => {
+                    this.apiStrategy.onEditorReplaceContent(state.question.range, state.originalRangeContent)
+                    return { ...state, enum: 'in session, idle' }
+                },
+
+                'EDITOR: end session': ({ session }, _) => ({ enum: 'no session', rejoinableSession: session })
+            },
+            "in session, editor is replacing content": {
+                'EDITOR: replaced content': (state, _) => {
+                    return {
+                        ...state,
+                        enum: 'in session, taking suggestions'
+                    }
+                }
+            }
+        } as const)
+
+        function genericErrorMessage(state: State, trans: Transition) {
+            console.warn(`Not defined: '${state.enum}' + '${trans.enum}' -> ???`)
+            return state
+        }
+
+        // TODO: fill this out with actually nice error messages
+        return completeMachine(happyPathStateMachine, {
+            'in session, idle': {
+                "EDITOR: replaced content": genericErrorMessage,
+                'EDITOR: create session': genericErrorMessage,
+                "EDITOR: accept selected suggestion": genericErrorMessage,
+                "EDITOR: delete suggestion": genericErrorMessage,
+                "EDITOR: modify range": genericErrorMessage,
+                "EDITOR: reject suggestions": genericErrorMessage,
+                "EDITOR: rejoin session": genericErrorMessage,
+                "EDITOR: select suggestion": genericErrorMessage,
+                "SERVER: question loaded": genericErrorMessage,
+                "SERVER: session created": genericErrorMessage,
+                "SERVER: suggestions updated": genericErrorMessage,
+            },
+            'in session, loading question': {
+                "EDITOR: replaced content": genericErrorMessage,
+                "SERVER: suggestions updated": genericErrorMessage,
+                "SERVER: session created": genericErrorMessage,
+                "EDITOR: create session": genericErrorMessage,
+                "EDITOR: pose question": genericErrorMessage,
+                "EDITOR: select suggestion": genericErrorMessage,
+                "EDITOR: rejoin session": genericErrorMessage,
+                "EDITOR: reject suggestions": genericErrorMessage,
+                "EDITOR: modify range": genericErrorMessage,
+                "EDITOR: delete suggestion": genericErrorMessage,
+                "EDITOR: accept selected suggestion": genericErrorMessage,
+            },
+            'in session, taking suggestions': {
+                "EDITOR: replaced content": genericErrorMessage,
+                "EDITOR: rejoin session": genericErrorMessage,
+                "SERVER: session created": genericErrorMessage,
+                "SERVER: question loaded": genericErrorMessage,
+                "EDITOR: create session": genericErrorMessage,
+                "EDITOR: pose question": genericErrorMessage
+            },
+            'no session': {
+                "EDITOR: replaced content": genericErrorMessage,
+                "EDITOR: accept selected suggestion": genericErrorMessage,
+                "EDITOR: delete suggestion": genericErrorMessage,
+                "EDITOR: modify range": genericErrorMessage,
+                "EDITOR: reject suggestions": genericErrorMessage,
+                "EDITOR: select suggestion": genericErrorMessage,
+                "SERVER: question loaded": genericErrorMessage,
+                "SERVER: session created": genericErrorMessage,
+                "SERVER: suggestions updated": genericErrorMessage,
+                "EDITOR: pose question": genericErrorMessage,
+            },
+            'creating session': {
+                "EDITOR: replaced content": genericErrorMessage,
+                "EDITOR: accept selected suggestion": genericErrorMessage,
+                "EDITOR: delete suggestion": genericErrorMessage,
+                "EDITOR: modify range": genericErrorMessage,
+                "EDITOR: reject suggestions": genericErrorMessage,
+                "EDITOR: select suggestion": genericErrorMessage,
+                "SERVER: question loaded": genericErrorMessage,
+                "SERVER: suggestions updated": genericErrorMessage,
+                "EDITOR: pose question": genericErrorMessage,
+                "EDITOR: create session": genericErrorMessage,
+                "EDITOR: rejoin session": genericErrorMessage,
+                "EDITOR: end session": genericErrorMessage
+            },
+            "in session, editor is replacing content": {
+                "SERVER: session created": genericErrorMessage,
+                "EDITOR: accept selected suggestion": genericErrorMessage,
+                "EDITOR: delete suggestion": genericErrorMessage,
+                "EDITOR: modify range": genericErrorMessage,
+                "EDITOR: reject suggestions": genericErrorMessage,
+                "EDITOR: select suggestion": genericErrorMessage,
+                "SERVER: question loaded": genericErrorMessage,
+                "SERVER: suggestions updated": genericErrorMessage,
+                "EDITOR: pose question": genericErrorMessage,
+                "EDITOR: create session": genericErrorMessage,
+                "EDITOR: rejoin session": genericErrorMessage,
+                "EDITOR: end session": genericErrorMessage
+            }
+        })
+    }
+
+    private doTransition (transition: Transition) {
+        const func = this.fullStateMachine()[this.state_.enum][transition.enum] as FuncForStateAndTransition<typeof this.state_.enum, typeof transition.enum>
+        this.state_ = func(this.state_, transition)
+        console.log(transition, this.state_)
+        this.notifyStateUpdate()
+    }
+
+    currentState() { return this.state_ }
+}

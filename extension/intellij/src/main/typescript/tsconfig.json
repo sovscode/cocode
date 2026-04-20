@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "outDir": "../resources/webview/js",
+    "target": "ES2020",
+    "module": "ESNext",
+    "strict": true
+  },
+  "include": ["*.ts"]
+}

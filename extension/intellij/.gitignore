@@ -5,6 +5,11 @@ build/
 !**/src/test/**/build/
 .kotlin
 
+**/node_modules/
+**/package-lock.json
+/src/main/resources/webview/js/
+
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml
@@ -41,3 +46,4 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+/.intellijPlatform/localPlatformArtifacts/
