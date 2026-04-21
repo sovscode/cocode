@@ -126,10 +126,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const setInSessionBool = (b: boolean) =>
     vscode.commands.executeCommand("setContext", "cocode.inSession", b);
   stateMachineHandler.attach({
-    onStateUpdate: (state) => {
-      setInSessionBool(isInSession(state));
-      sidepanelViewProvider.updateView(state);
-      documentHandler?.updateEditor(state);
+    onStateUpdate: state => {
+      setInSessionBool(isInSession(state))
+      sidepanelViewProvider.updateView(state)
+      documentHandler?.updateEditor(state)
     },
   });
 
