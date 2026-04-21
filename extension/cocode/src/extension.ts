@@ -1,15 +1,13 @@
 import * as path from "path";
 import * as vscode from "vscode";
 
-import { Answer, Question, QuestionPostResult, Session } from "./types";
+import { State, isInSession } from "./statemachine"
+import { constructStateMachineAPI } from "./statemachineapi"
+
+import { Answer, Session } from "./types";
 
 import { EventSource } from "eventsource";
 import { ViewProvider } from "./providers/view-provider";
-import {
-  isInSession,
-  isTakingSuggestions,
-  StateMachineHandler,
-} from "./statemachine";
 import { DocumentHandler } from "./document-handler";
 
 // Fetch base url from env var
@@ -48,94 +46,53 @@ export async function activate(context: vscode.ExtensionContext) {
     oldSessionExists,
   );
 
-  const stateMachineHandler = new StateMachineHandler(
-    {
-      enum: "no session",
-      rejoinableSession: oldSessionExists
-        ? { id: previousId, code: previousCode }
-        : null,
-    },
-    {
-      onApiCreateSession: async () => {
-        // call end point to get code, and sessionid
-        const result = await fetch(`${baseUrl}/api/sessions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        const session = (await result.json()) as Session;
-        context.workspaceState.update("cocodeSessionId", session.id);
-        context.workspaceState.update("cocodeSessionCode", session.code);
-        stateMachineHandler.handleServerSessionCreated(session);
-      },
-      onApiPoseQuestion: async (sessionId, question) => {
-        const res = await fetch(
-          `${baseUrl}/api/sessions/${sessionId}/questions`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              ...question,
-              fromLine: question.range.fromLine,
-              toLine: question.range.toLine,
-            }),
-          },
-        );
-
-        const { id: questionId } = (await res.json()) as QuestionPostResult;
-        subscribeToAnswers(sessionId, questionId);
-        stateMachineHandler.handleServerQuestionLoaded(questionId);
-      },
-      onApiDeleteSuggestion: (sessionId, questionId, suggId) => {
-        fetch(
-          `${baseUrl}/api/sessions/${sessionId}/questions/${questionId}/answers/${suggId}`,
-          {
-            method: "DELETE",
-          },
-        );
-      },
-      onApiAcceptSelectedSuggestion: async (sessionId, questionId, suggId) => {
-        fetch(
-          `${baseUrl}/api/sessions/${sessionId}/questions/${questionId}/accept-answer`,
-          {
-            method: "POST",
-            body: JSON.stringify({ acceptedAnswerId: suggId }),
-          },
-        );
-      },
-      onApiRejectSuggestions: async (sessionId, questionId) => {
-        fetch(
-          `${baseUrl}/api/sessions/${sessionId}/questions/${questionId}/reject-answers`,
-          {
-            method: "POST",
-            body: JSON.stringify({ rejectAnswers: true }),
-          },
-        );
-      },
-      onEditorReplaceContent: async (range, content) => {
-        await documentHandler?.replaceContent(range, content);
-        stateMachineHandler.editorReplacedContent();
-      },
-    },
-  );
-
   const setInSessionBool = (b: boolean) =>
     vscode.commands.executeCommand("setContext", "cocode.inSession", b);
-  stateMachineHandler.attach({
-    onStateUpdate: state => {
-      setInSessionBool(isInSession(state))
-      sidepanelViewProvider.updateView(state)
-      documentHandler?.updateEditor(state)
-    },
-  });
+
+  const stateMachineAPI = constructStateMachineAPI(
+    previousId, previousCode, {
+      fetch: async (uri, method, body, id) => {
+        try {
+          const response = await fetch(`${baseUrl}/${uri}`, {
+            method: method,
+            body: body,
+            headers: body !== null ? { "Content-Type": "application/json", } : undefined
+          })
+          if (!response.ok) {
+            console.log(`FETCH didn't respond with OK:`, await response.text())
+            return;
+          }
+          const json = await response.json()
+          stateMachineAPI.handleHttpResponse(id, JSON.stringify(json))
+        } catch (e) {
+          console.log(`FETCH error:`, e)
+        }
+      },
+      onStateChange: (stateStr: string) => {
+        const state = JSON.parse(stateStr) as State
+        setInSessionBool(isInSession(state))
+        sidepanelViewProvider.updateView(state)
+        documentHandler?.updateEditor(state)
+      },
+      subscribeToSSE: (uri, event) => {
+        console.log("doing thing")
+        const sse = new EventSource(`${baseUrl}/${uri}`);
+        sse.addEventListener(event, async (_) => {
+          stateMachineAPI.handleSSE(event)
+        });
+      },
+      editorReplaceContent: async (fromLine, toLine, content) => {
+        await documentHandler?.replaceContent({ fromLine, toLine }, content);
+        stateMachineAPI.editorReplacedContent();
+      },
+      onError: msg => console.error(msg),
+    }
+  )
+
 
   const onChooseAnswerInPanel = (id: Answer["id"] | null) => {
     console.log(`chose ${id}`);
-    stateMachineHandler.editorSelectSuggestion(id);
+    stateMachineAPI.editorSelectSuggestion(id);
   };
 
   const viewHtmlPath = path.join(context.extensionPath, "media", "view.html");
@@ -153,7 +110,10 @@ export async function activate(context: vscode.ExtensionContext) {
     context,
     onChooseAnswerInPanel,
     baseUrl,
-    () => stateMachineHandler.forceUpdate(),
+    () => {
+      const state = JSON.parse(stateMachineAPI.currentState()) as State
+      sidepanelViewProvider.updateView(state)
+    },
   );
 
   context.subscriptions.push(
@@ -164,50 +124,24 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   let documentHandler: DocumentHandler | null = null;
-
-  const apiPollAnswers = async () => {
-    const state = stateMachineHandler.currentState();
-    if (!isTakingSuggestions(state)) return;
-
-    const { session, question } = state;
-
-    const res = await fetch(
-      `${baseUrl}/api/sessions/${session.id}/questions/${question.id}/answers`,
-    );
-    const answers: Answer[] = (await res.json()) as Answer[];
-    stateMachineHandler.handleServerSuggestionsUpdated(answers);
-  };
-
-  function subscribeToAnswers(sid: string, qid: string) {
-    const url = `${baseUrl}/api/events/sessions/${sid}/questions/${qid}/answers`;
-    const sse = new EventSource(url);
-    // Listen for the custom 'answer-to-question' event we defined in our Next.js stream
-    const eventId = `answer-to-question:${qid}`;
-    sse.addEventListener(eventId, async (_) => {
-      apiPollAnswers().catch((err) => {
-        console.error(err);
-      });
-    });
-  }
-
   // register command to rejoin previous session
   context.subscriptions.push(
     vscode.commands.registerCommand("cocode.rejoinSession", () => {
-      stateMachineHandler.editorRejoinSession();
+      stateMachineAPI.editorRejoinSession();
     }),
   );
 
   // register command to start a new  session
   context.subscriptions.push(
     vscode.commands.registerCommand("cocode.startSession", () => {
-      stateMachineHandler.editorCreateSession();
+      stateMachineAPI.editorCreateSession();
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("cocode.postQuestion", () => {
       const editor = vscode.window.activeTextEditor;
-      const state = stateMachineHandler.currentState();
+      const state = JSON.parse(stateMachineAPI.currentState()) as State;
 
       if (!isInSession(state)) {
         vscode.window.showWarningMessage("No active session.");
@@ -220,7 +154,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       documentHandler = DocumentHandler.fromEditor(editor, (r) =>
-        stateMachineHandler.editorModifyRange(r),
+        stateMachineAPI.editorModifyRange(r.fromLine, r.toLine),
       );
 
       const range = documentHandler.getSelectedRange();
@@ -229,25 +163,20 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const question = {
-        range: range,
-        content: documentHandler.getFullEditorContent(),
-        language: editor.document.languageId,
-      } satisfies Omit<Question, "id">;
-
-      stateMachineHandler.editorPoseQuestion(question);
+      const content = documentHandler.getFullEditorContent()
+      stateMachineAPI.editorPoseQuestion(content, range.fromLine, range.toLine, editor.document.languageId);
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("cocode.acceptSuggestion", () => {
-      stateMachineHandler.editorAcceptSelectedSuggestion();
+      stateMachineAPI.editorAcceptSelectedSuggestion();
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("cocode.rejectSuggestions", () => {
-      stateMachineHandler.editorRejectSuggestions();
+      stateMachineAPI.editorRejectSuggestions();
     }),
   );
 
@@ -255,16 +184,17 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "cocode.deleteSuggestion",
       (id: Answer["id"]) => {
-        stateMachineHandler.editorDeleteSuggestion(id);
+        stateMachineAPI.editorDeleteSuggestion(id);
       },
     ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("cocode.endSession", () => {
-      stateMachineHandler.editorEndSession();
+      stateMachineAPI.editorEndSession();
     }),
   );
 }
 
 export function deactivate() {}
+

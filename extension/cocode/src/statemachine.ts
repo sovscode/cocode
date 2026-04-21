@@ -215,46 +215,21 @@ export class StateMachineHandler {
     return this.notifyStateUpdate();
   }
 
-  editorCreateSession() {
-    this.doTransition({ enum: "EDITOR: create session" });
-  }
-  editorRejoinSession() {
-    this.doTransition({ enum: "EDITOR: rejoin session" });
-  }
-  editorPoseQuestion(question: Omit<Question, "id">) {
-    this.doTransition({ enum: "EDITOR: pose question", question });
-  }
-  editorModifyRange(newRange: Range) {
-    this.doTransition({ enum: "EDITOR: modify range", newRange });
-  }
-  editorSelectSuggestion(suggId: Answer["id"] | null) {
-    this.doTransition({ enum: "EDITOR: select suggestion", suggId });
-  }
-  editorReplacedContent() {
-    this.doTransition({ enum: "EDITOR: replaced content" });
-  }
-  editorAcceptSelectedSuggestion() {
-    this.doTransition({ enum: "EDITOR: accept selected suggestion" });
-  }
-  editorRejectSuggestions() {
-    this.doTransition({ enum: "EDITOR: reject suggestions" });
-  }
-  editorDeleteSuggestion(suggId: Answer["id"]) {
-    this.doTransition({ enum: "EDITOR: delete suggestion", suggId });
-  }
-  editorEndSession() {
-    this.doTransition({ enum: "EDITOR: end session" });
-  }
 
-  handleServerQuestionLoaded(questionId: Question["id"]) {
-    this.doTransition({ enum: "SERVER: question loaded", questionId });
-  }
-  handleServerSessionCreated(session: Session) {
-    this.doTransition({ enum: "SERVER: session created", session });
-  }
-  handleServerSuggestionsUpdated(suggestions: Answer[]) {
-    this.doTransition({ enum: "SERVER: suggestions updated", suggestions });
-  }
+  editorCreateSession() { this.doTransition({ enum: "EDITOR: create session" }); }
+  editorRejoinSession() { this.doTransition({ enum: "EDITOR: rejoin session" }); }
+  editorPoseQuestion(question: Omit<Question, "id">) { this.doTransition({ enum: "EDITOR: pose question", question }); }
+  editorModifyRange(newRange: Range) { this.doTransition({ enum: "EDITOR: modify range", newRange }); }
+  editorSelectSuggestion(suggId: Answer["id"] | null) { this.doTransition({ enum: "EDITOR: select suggestion", suggId }); }
+  editorReplacedContent() { this.doTransition({ enum: "EDITOR: replaced content" }); }
+  editorAcceptSelectedSuggestion() { this.doTransition({ enum: "EDITOR: accept selected suggestion" }); }
+  editorRejectSuggestions() { this.doTransition({ enum: "EDITOR: reject suggestions" }); }
+  editorDeleteSuggestion(suggId: Answer["id"]) { this.doTransition({ enum: "EDITOR: delete suggestion", suggId }); }
+  editorEndSession() { this.doTransition({ enum: "EDITOR: end session" }); }
+
+  handleServerQuestionLoaded(questionId: Question["id"]) { this.doTransition({ enum: "SERVER: question loaded", questionId }); }
+  handleServerSessionCreated(session: Session) { this.doTransition({ enum: "SERVER: session created", session }); }
+  handleServerSuggestionsUpdated(suggestions: Answer[]) { this.doTransition({ enum: "SERVER: suggestions updated", suggestions }); }
 
   private static initStateMachine(apiStrategy: ApiStrategy) {
     const changeSelectedSuggestion = (
@@ -534,7 +509,7 @@ export class StateMachineHandler {
     });
   }
 
-  private doTransition(transition: Transition) {
+  doTransition(transition: Transition) {
     const func = this.stateMachine[this.state_.enum][
       transition.enum
     ] as FuncForStateAndTransition<
