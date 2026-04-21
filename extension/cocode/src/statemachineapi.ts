@@ -2,7 +2,7 @@ import { Session, QuestionPostResult } from "./types"
 import { State, StateMachineHandler, isInSession, isTakingSuggestions } from "./statemachine"
 
 export interface StateMachineAPICallbacks {
-  fetch: (uri: string, method: string, body: string, id: string) => void
+  fetch: (uri: string, method: string, body: string | null, id: string) => void
   subscribeToSSE: (uri: string, event: string) => void
   editorReplaceContent: (fromLine: number, toLine: number, content: string) => void 
   onStateChange: (state: string) => void
@@ -42,7 +42,7 @@ export function constructStateMachineAPI(
     }, 
     {
       onApiCreateSession: () => {
-        callbacks.fetch("api/sessions", "POST", "", "Create Session")
+        callbacks.fetch("api/sessions", "POST", null, "Create Session")
       },
       onApiPoseQuestion(sessionId, question) {
         callbacks.fetch(`api/sessions/${sessionId}/questions`, "POST", JSON.stringify({
@@ -53,7 +53,7 @@ export function constructStateMachineAPI(
 
       },
       onApiDeleteSuggestion(sessionId, questionId, suggId) {
-        callbacks.fetch(`api/sessions/${sessionId}/questions/${questionId}/answers/${suggId}`, "DELETE", "", "Delete Suggestion")
+        callbacks.fetch(`api/sessions/${sessionId}/questions/${questionId}/answers/${suggId}`, "DELETE", null, "Delete Suggestion")
       },
       onApiAcceptSelectedSuggestion(sessionId, questionId, suggId) {
         callbacks.fetch(
@@ -131,7 +131,7 @@ export function constructStateMachineAPI(
       callbacks.fetch(
         `api/sessions/${session.id}/questions/${question.id}/answers`,
         "GET",
-        "",
+        null,
         "Poll Suggestions"
       )
     },

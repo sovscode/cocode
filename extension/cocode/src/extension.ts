@@ -52,14 +52,21 @@ export async function activate(context: vscode.ExtensionContext) {
   const stateMachineAPI = constructStateMachineAPI(
     previousId, previousCode, {
       fetch: async (uri, method, body, id) => {
-        console.log(uri, method, id, `"${body}"`)
-        const response = await fetch(`${baseUrl}/${uri}`, {
-          method: method,
-          body: body && JSON.parse(body) || undefined,
-          headers: { "Content-Type": "application/json", }
-        })
-        const json = await response.json()
-        stateMachineAPI.handleHttpResponse(id, JSON.stringify(json))
+        try {
+          const response = await fetch(`${baseUrl}/${uri}`, {
+            method: method,
+            body: body,
+            headers: body !== null ? { "Content-Type": "application/json", } : undefined
+          })
+          if (!response.ok) {
+            console.log(`FETCH didn't respond with OK:`, await response.text())
+            return;
+          }
+          const json = await response.json()
+          stateMachineAPI.handleHttpResponse(id, JSON.stringify(json))
+        } catch (e) {
+          console.log(`FETCH error:`, e)
+        }
       },
       onStateChange: (stateStr: string) => {
         const state = JSON.parse(stateStr) as State
