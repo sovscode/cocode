@@ -22,7 +22,6 @@ export default async function Page({
       where: { session: { code } },
       orderBy: { createdAt: "desc" },
     });
-    if (latestQuestion) latestQuestion.isOpen = false;
 
     return <RealtimeAnswer code={code} initialQuestion={latestQuestion} />;
   } catch (error) {
