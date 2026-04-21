@@ -75,6 +75,7 @@ export async function activate(context: vscode.ExtensionContext) {
         documentHandler?.updateEditor(state)
       },
       subscribeToSSE: (uri, event) => {
+        console.log("doing thing")
         const sse = new EventSource(`${baseUrl}/${uri}`);
         sse.addEventListener(event, async (_) => {
           stateMachineAPI.handleSSE(event)

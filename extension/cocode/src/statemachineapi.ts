@@ -1,4 +1,4 @@
-import { Session, QuestionPostResult } from "./types"
+import { Answer, Session, QuestionPostResult } from "./types"
 import { State, StateMachineHandler, isInSession, isTakingSuggestions } from "./statemachine"
 
 export interface StateMachineAPICallbacks {
@@ -121,6 +121,9 @@ export function constructStateMachineAPI(
         case "Delete Suggestion":
           // don't care
           break;
+        case "Poll Suggestions":
+          const answers = JSON.parse(body) as Answer[]
+          machineHandler.handleServerSuggestionsUpdated(answers)
       }
     },
     handleSSE: (_: string) => {
