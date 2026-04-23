@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { getUpdatedRanges } from "vscode-position-tracking";
 import { State } from "./statemachine";
 import { Range } from "./types";
-import { json } from "stream/consumers";
 
 class DynamicRange {
   private range_: vscode.Range | null;
@@ -73,7 +72,8 @@ class DecorationHandler {
     });
     this.loading_decoration = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
-      backgroundColor: 'rgba(190, 185, 31, 0.47)'
+      backgroundColor: 'rgba(190, 185, 31, 0.1)',
+      outline: '2px dotted black'
     });
   }
 
@@ -86,7 +86,7 @@ class DecorationHandler {
     });
   }
 
-  updateRange(document: vscode.TextDocument, range: vscode.Range, loading : boolean ) {
+  updateRange(document: vscode.TextDocument, range: vscode.Range, loading: boolean) {
     vscode.window.visibleTextEditors.forEach(e => {
       if (e.document === document) {
         e.setDecorations(this.loading_decoration, loading ? [range] : []);
@@ -121,6 +121,7 @@ export class DocumentHandler {
     this.onRangeModified = onRangeModified
 
     this.updateRange(selection, true);
+
 
     vscode.workspace.onDidChangeTextDocument((event) => {
       this.dynamicRange?.update(event);
@@ -184,10 +185,9 @@ export class DocumentHandler {
   }
 
   private updateRange(newRange: vscode.Range | null, loading: boolean) {
-    this.decorationHandler.clear(this.document);
-
     if (!newRange) {
       this.dynamicRange = null;
+      this.decorationHandler.clear(this.document);
       return;
     }
 
@@ -210,14 +210,16 @@ export class DocumentHandler {
       case "no session":
       case "creating session":
       case "in session, idle":
+        vscode.commands.executeCommand('workbench.action.files.setActiveEditorWriteableInSession');
         this.decorationHandler.clear(this.document);
         break;
 
       case 'in session, loading question': 
       case 'in session, taking suggestions':
+        vscode.commands.executeCommand('workbench.action.files.setActiveEditorReadonlyInSession');
+
         const loading = state.enum === 'in session, loading question';
-        console.log(loading);
-        this.updateRange(rangeToVsCodeRange(this.document, state.question.range), true)
+        this.updateRange(rangeToVsCodeRange(this.document, state.question.range), loading)
         break;
     }
   }
