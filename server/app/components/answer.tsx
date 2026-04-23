@@ -3,16 +3,20 @@
 import IDE, { extractLineRange } from "./ide";
 
 import Menubar from "./menubar";
-import { QuestionModel } from "@/lib/generated/prisma/models";
-import { useState } from "react";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { toast } from "sonner";
+import { useState } from "react";
+
+type QuestionWithChosenAnswer = Prisma.QuestionGetPayload<{
+  include: { chosenAnswer: true };
+}>;
 
 export default function Answer({
   code,
   question,
 }: {
   code: number;
-  question: QuestionModel;
+  question: QuestionWithChosenAnswer;
 }) {
   let hintMessage = "Edit the code below and submit when you're done.";
   if (question && !question.isOpen) {
@@ -28,6 +32,9 @@ export default function Answer({
   const [latestSubmittedAnswer, setLatestSubmittedAnswer] = useState(
     unchangedEditableInput,
   );
+  if (question && !question.isOpen && question?.chosenAnswer?.text) {
+    setUserAnswer(question.chosenAnswer.text);
+  }
   const [resetKey, setResetKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
