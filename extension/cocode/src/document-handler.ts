@@ -64,26 +64,33 @@ class DynamicRange {
 }
 
 class DecorationHandler {
-  private decoration: vscode.TextEditorDecorationType;
+  private active_decoration: vscode.TextEditorDecorationType;
+  private loading_decoration: vscode.TextEditorDecorationType;
   constructor() {
-    this.decoration = vscode.window.createTextEditorDecorationType({
+    this.active_decoration = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
-      backgroundColor: "rgba(34, 170, 34, 0.1)",
+      backgroundColor: 'rgba(34, 170, 34, 0.1)'
+    });
+    this.loading_decoration = vscode.window.createTextEditorDecorationType({
+      isWholeLine: true,
+      backgroundColor: 'rgba(190, 185, 31, 0.47)'
     });
   }
 
   clear(document: vscode.TextDocument) {
     vscode.window.visibleTextEditors.forEach((e) => {
       if (e.document === document) {
-        e.setDecorations(this.decoration, []);
+        e.setDecorations(this.active_decoration, [])
+        e.setDecorations(this.loading_decoration, [])
       }
     });
   }
 
-  updateRange(document: vscode.TextDocument, range: vscode.Range) {
-    vscode.window.visibleTextEditors.forEach((e) => {
+  updateRange(document: vscode.TextDocument, range: vscode.Range, loading : boolean ) {
+    vscode.window.visibleTextEditors.forEach(e => {
       if (e.document === document) {
-        e.setDecorations(this.decoration, [range]);
+        e.setDecorations(this.loading_decoration, loading ? [range] : []);
+        e.setDecorations(this.active_decoration, loading ? [] : [range]);
       }
     });
   }
@@ -109,15 +116,11 @@ export class DocumentHandler {
   private dynamicRange: DynamicRange | null = null;
   private onRangeModified: (newRange: Range) => void;
 
-  constructor(
-    document: vscode.TextDocument,
-    selection: vscode.Selection,
-    onRangeModified: (newRange: Range) => void,
-  ) {
-    this.document = document;
-    this.onRangeModified = onRangeModified;
+  constructor(document: vscode.TextDocument, selection:vscode.Range,  onRangeModified: (newRange: Range) => void) {
+    this.document = document
+    this.onRangeModified = onRangeModified
 
-    this.updateRange(selection);
+    this.updateRange(selection, true);
 
     vscode.workspace.onDidChangeTextDocument((event) => {
       this.dynamicRange?.update(event);
@@ -180,7 +183,7 @@ export class DocumentHandler {
     this.onRangeModified(vsCodeRangeToRange(range));
   }
 
-  private updateRange(newRange: vscode.Range | null) {
+  private updateRange(newRange: vscode.Range | null, loading: boolean) {
     this.decorationHandler.clear(this.document);
 
     if (!newRange) {
@@ -188,7 +191,7 @@ export class DocumentHandler {
       return;
     }
 
-    this.decorationHandler.updateRange(this.document, newRange);
+    this.decorationHandler.updateRange(this.document, newRange, loading)
     this.dynamicRange = new DynamicRange(
       newRange,
       this.document,
@@ -210,22 +213,17 @@ export class DocumentHandler {
         this.decorationHandler.clear(this.document);
         break;
 
-      case "in session, loading question":
-        this.updateRange(
-          rangeToVsCodeRange(this.document, state.question.range),
-        );
-        break;
-
-      case "in session, taking suggestions":
-        this.updateRange(
-          rangeToVsCodeRange(this.document, state.question.range),
-        );
+      case 'in session, loading question': 
+      case 'in session, taking suggestions':
+        const loading = state.enum === 'in session, loading question';
+        console.log(loading);
+        this.updateRange(rangeToVsCodeRange(this.document, state.question.range), true)
         break;
     }
   }
 
   // calling this function will mean tracking of ranges will stop until
-  //   the next time this.updateEditor is called
+  // the next time this.updateEditor is called
   async replaceContent(range: Range, content: string): Promise<void> {
     return this.getOrCreateActiveEditor().then((editor) =>
       editor
