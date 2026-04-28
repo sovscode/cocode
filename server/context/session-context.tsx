@@ -51,9 +51,11 @@ interface SessionProviderProps {
  * Internal state is of type: Session.
  */
 export function SessionProvider({ code, children }: SessionProviderProps) {
+  const initialSessionContextWithCode = { ...initialSessionContext, code };
+
   const [sessionContext, dispatch] = useReducer(
     sessionReducer,
-    initialSessionContext,
+    initialSessionContextWithCode,
   );
 
   return (
