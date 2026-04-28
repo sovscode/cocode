@@ -97,7 +97,8 @@ export default function Answer() {
       break;
   }
   console.log("ideProps is now: ", ideProps);
-  function handleChangeUserAnswer(userAnswer: string): void {
+  function handleContentChange(userAnswer: string): void {
+    if (viewMode != "userAnswer") return;
     console.log("UpdateUserAnswer");
     if (!sessionDispatch) return;
     if (viewMode == "userAnswer") console.log("Dispatching ", userAnswer);
@@ -114,7 +115,7 @@ export default function Answer() {
         submitting={submitting}
         onSubmit={handleSubmit}
         onReset={handleReset}
-        hasChanges={userAnswerContent != statedQuestionContent}
+        canReset={isOpen && userAnswerContent != statedQuestionContent}
         canSubmit={canSubmit}
       />
       <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
@@ -137,7 +138,7 @@ export default function Answer() {
               after={ideProps.after}
               readonly={ideProps.readonly}
               language={ideProps.language}
-              onChangeUserAnswer={handleChangeUserAnswer}
+              onContentChange={handleContentChange}
             />
           ) : (
             <div className="flex items-center justify-center w-full h-full">

@@ -108,6 +108,7 @@ function sessionReducer(
         session.userAnswerContent,
         session.statedQuestionContent,
         newSubmittedAnswers,
+        session.isOpen,
       );
       return {
         ...session,
@@ -123,13 +124,13 @@ function sessionReducer(
       };
     }
     case "UpdateCurrentQuestion": {
-      console.log("QUestion, ", action.value.fromLine, action.value.toLine);
       const fromLineIndex = action.value.fromLine - 1;
       const toLineIndex = action.value.toLine - 1;
       const lines = action.value.content.split("\n");
       const before = lines.slice(0, fromLineIndex).join("\n");
       const content = lines.slice(fromLineIndex, toLineIndex).join("\n");
       const after = lines.slice(toLineIndex).join("\n");
+
       return {
         ...session,
         statedQuestion: action.value,
@@ -150,6 +151,7 @@ function sessionReducer(
         action.value.content,
         session.statedQuestionContent,
         session.submittedAnswers,
+        session.isOpen,
       );
 
       return {
@@ -183,9 +185,11 @@ function decideCanSubmit(
   currentContent: string,
   statedQuestionContent: string,
   submittedAnswers: string[],
+  isOpen: boolean,
 ) {
   const isPreviouslySubmitted = submittedAnswers.includes(currentContent);
   const isDifferentFromStatedQuestion = currentContent != statedQuestionContent;
-  const canSubmit = !isPreviouslySubmitted && isDifferentFromStatedQuestion;
+  const canSubmit =
+    !isPreviouslySubmitted && isDifferentFromStatedQuestion && isOpen;
   return canSubmit;
 }

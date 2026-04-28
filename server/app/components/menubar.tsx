@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 
 export default function Menubar({
   code,
-  hasChanges,
+  canReset,
   submitting,
   canSubmit,
   onSubmit,
   onReset,
 }: {
   code: number;
-  hasChanges: boolean;
+  canReset: boolean;
   submitting: boolean;
   canSubmit: boolean;
   onSubmit: () => void;
@@ -47,7 +47,7 @@ export default function Menubar({
             variant="outline"
             className="text-gray-500 hover:text-gray-900 cursor-pointer rounded-md md:rounded-full"
             onClick={onReset}
-            disabled={!hasChanges}
+            disabled={!canReset}
           >
             <p className="hidden md:block">Reset changes</p>
             <p className="block md:hidden">Reset</p>

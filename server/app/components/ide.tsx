@@ -19,9 +19,9 @@ export default function IDE({
   after,
   language,
   readonly,
-  onChangeUserAnswer,
+  onContentChange,
 }: IdeProps & {
-  onChangeUserAnswer: (answer: string) => void;
+  onContentChange: (answer: string) => void;
 }) {
   const { hasQuestion } = useSession();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -51,7 +51,10 @@ export default function IDE({
     const currentCode = editorRef.current.getValue();
     const currentLines = currentCode.split(/\r?\n/);
 
-    const userCodeLines = currentLines.slice(fromLineIndex, toLineIndex);
+    const userCodeLines = currentLines.slice(
+      fromLineIndex,
+      currentLines.length - bottomReadonlyCount,
+    );
 
     const userAnswerContent = userCodeLines.join("\n");
     console.log("userAnswerContent");
@@ -89,6 +92,51 @@ export default function IDE({
     editor.setPosition(initialPosition);
     editor.revealLineInCenter(fromLine);
 
+    setupHighlightedArea(editor, newModel, constrainedInstance, monaco);
+
+    // Ping the parent with the initial extracted answer
+    // onChangeUserAnswer(extractUserAnswer());
+  };
+
+  // Run setup whenever the question prop changes
+  useEffect(() => {
+    setupEditorForQuestion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readonly]);
+  useEffect(() => {
+    const currentEditorValue = editorRef.current?.getValue();
+    const newEditorValue = [before, content, after].join("\n");
+    if (currentEditorValue != newEditorValue) {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
+      const monaco = monacoRef.current;
+      if (!(editor && model && monaco)) return;
+      editor.setValue(newEditorValue);
+      // TODO: Update grey-out here
+      setupHighlightedArea(
+        editor,
+        model,
+        constrainedInstanceRef.current,
+        monaco,
+      );
+    }
+  }, [before, content, after]);
+
+  // Initial mount
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    constrainedInstanceRef.current = constrainedEditor(monaco);
+
+    setupEditorForQuestion();
+  };
+
+  function setupHighlightedArea(
+    editor: editor.IStandaloneCodeEditor,
+    newModel: editor.ITextModel,
+    constrainedInstance: any,
+    monaco: typeof import("monaco-editor"),
+  ) {
     if (fromLine <= toLine) {
       editor.updateOptions({ readOnly: false });
 
@@ -189,39 +237,13 @@ export default function IDE({
     } else {
       editor.updateOptions({ readOnly: readonly });
     }
-
-    // Ping the parent with the initial extracted answer
-    // onChangeUserAnswer(extractUserAnswer());
-  };
-
-  // Run setup whenever the question prop changes
-  useEffect(() => {
-    setupEditorForQuestion();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readonly]);
-  useEffect(() => {
-    const currentEditorValue = editorRef.current?.getValue();
-    const newEditorValue = [before, content, after].join("\n");
-    if (currentEditorValue != newEditorValue) {
-      editorRef.current?.setValue(newEditorValue);
-      // TODO: Update grey-out here
-    }
-  }, [before, content, after]);
-
-  // Initial mount
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    constrainedInstanceRef.current = constrainedEditor(monaco);
-
-    setupEditorForQuestion();
-  };
+  }
 
   function handleChange() {
     const userAnswer = extractUserAnswer();
     console.log("userAnswer");
     console.log(userAnswer);
-    onChangeUserAnswer(userAnswer);
+    onContentChange(userAnswer);
   }
 
   return hasQuestion ? (
