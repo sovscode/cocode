@@ -1,28 +1,34 @@
 "use client";
 
 import IDE, { extractLineRange } from "./ide";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import Menubar from "./menubar";
-import { Prisma } from "@/lib/generated/prisma/client";
 import { toast } from "sonner";
+import { useSession } from "@/context/session-context";
 import { useState } from "react";
 
-type QuestionWithChosenAnswer = Prisma.QuestionGetPayload<{
-  include: { chosenAnswer: true };
-}>;
+export default function Answer() {
+  const { statedQuestion: question, code, hasChosenAnswer } = useSession();
+  const [viewMode, setViewMode] = useState("statedQuestion");
 
-export default function Answer({
-  code,
-  question,
-}: {
-  code: number;
-  question: QuestionWithChosenAnswer;
-}) {
   let hintMessage = "Edit the code below and submit when you're done.";
   if (question && !question.isOpen) {
     hintMessage = "The question is currently not open for answers.";
   }
 
+  let questionContent = question?.content;
+  if (question && !question.isOpen && question?.chosenAnswer?.text) {
+    questionContent = question.chosenAnswer.text;
+  }
   const unchangedEditableInput = extractLineRange(
     question?.content,
     question?.fromLine,
@@ -32,9 +38,6 @@ export default function Answer({
   const [latestSubmittedAnswer, setLatestSubmittedAnswer] = useState(
     unchangedEditableInput,
   );
-  if (question && !question.isOpen && question?.chosenAnswer?.text) {
-    setUserAnswer(question.chosenAnswer.text);
-  }
   const [resetKey, setResetKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
@@ -77,9 +80,25 @@ export default function Answer({
       />
       <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
         <div className="border border-zinc-100 rounded-xl overflow-hidden w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
+          <Select value={viewMode} onValueChange={setViewMode}>
+            <SelectTrigger className="w-full max-w-48">
+              <SelectValue placeholder="Select a mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="statedQuestion">Stated question</SelectItem>
+                <SelectItem value="userAnswer">Your changes</SelectItem>
+                <SelectItem value="chosenAnswer" disabled={hasChosenAnswer}>
+                  Chosen answer
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
           <p className="p-4 text-center border-b text-slate-400">
             {hintMessage}
           </p>
+
           {question ? (
             <IDE
               key={resetKey}

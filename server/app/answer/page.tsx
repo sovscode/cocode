@@ -1,5 +1,4 @@
-import RealtimeAnswer from "../components/realtime-answer";
-import { prisma } from "@/lib/prisma";
+import App from "./app";
 
 export default async function Page({
   searchParams,
@@ -9,23 +8,13 @@ export default async function Page({
   const { code: codeParam } = await searchParams;
 
   if (!codeParam) {
-    return <p>No code was provided</p>;
+    return <p>Please provide a join code</p>;
   }
 
   const code = Number(codeParam);
   if (Number.isNaN(code) || !Number.isInteger(code)) {
-    return <p>Invalid code value: {codeParam}</p>;
+    return <p>Invalid join code: {codeParam}</p>;
   }
 
-  try {
-    const latestQuestion = await prisma.question.findFirst({
-      where: { session: { code } },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return <RealtimeAnswer code={code} initialQuestion={latestQuestion} />;
-  } catch (error) {
-    console.error("Error fetching latest question by code:", error);
-    return <p>Failed to load question</p>;
-  }
+  return <App code={code} />;
 }
