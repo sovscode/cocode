@@ -18,12 +18,12 @@ export async function GET(
       // 1. Send an initial ping to establish connection
       controller.enqueue(
         encoder.encode(
-          `event: connected\ndata: {"status": "listening for answers for session with code: ${code}"}\n\n`,
+          `event: connected\ndata: {"status": "will notify you, when the current question changes for session with code: ${code}"}\n\n`,
         ),
       );
 
       // 2. Define the callback that fires when this session is updated
-      const onUpdate = (data: any) => {
+      const onUpdate = (data: { message: string }) => {
         const payload = JSON.stringify(data);
         controller.enqueue(
           encoder.encode(

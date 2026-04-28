@@ -6,6 +6,7 @@ import MonacoEditor, { OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
 
 import { QuestionModel } from "@/lib/generated/prisma/models";
+import { Spinner } from "@/components/ui/spinner";
 /* @ts-ignore */
 import { constrainedEditor } from "constrained-editor-plugin";
 import type { editor } from "monaco-editor";
@@ -167,7 +168,7 @@ export default function IDE({
             sel.endLineNumber > currentEditableRange.endLineNumber,
         );
 
-        editor.updateOptions({ readOnly: isOutside });
+        editor.updateOptions({ readOnly: isOutside || !question.isOpen });
       });
     } else {
       editor.updateOptions({ readOnly: true });
@@ -201,9 +202,19 @@ export default function IDE({
       defaultLanguage="javascript"
       onMount={handleEditorDidMount}
       onChange={handleChange}
+      loading={<Spinner className="w-8 h-8 text-slate-400" />}
       options={{
+        domReadOnly: !question.isOpen,
+        readOnly: !question.isOpen,
+        cursorStyle: question.isOpen ? "line" : "line-thin",
+        cursorBlinking: question.isOpen ? "blink" : "solid",
         automaticLayout: true,
-        fixedOverflowWidgets: true, // <-- The magic fix!
+        fixedOverflowWidgets: true,
+        readOnlyMessage: {
+          value: question.isOpen
+            ? "Edit the area highlighted with green."
+            : "The question is currently not open for answers.",
+        },
       }}
     />
   ) : (

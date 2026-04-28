@@ -15,21 +15,25 @@ model Session {
 }
 
 model Question {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  sessionId String
-  content   String
-  fromLine  Int
-  toLine    Int
-  language  String?
-  answers   Answer[]
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  sessionId      String
+  isOpen         Boolean  @default(true)
+  content        String
+  fromLine       Int
+  toLine         Int
+  language       String?
+  answers        Answer[] @relation("answers")
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  chosenAnswer   Answer?  @relation(fields: [chosenAnswerId], references: [id])
+  chosenAnswerId String?
 }
 
 model Answer {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
+  id         String     @id @default(cuid())
+  createdAt  DateTime   @default(now())
   text       String?
   questionId String
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question   Question   @relation("answers", fields: [questionId], references: [id], onDelete: Cascade)
+  questions  Question[]
 }

@@ -1,9 +1,12 @@
 import { Answer, answerNoIdSchema } from "@/types/api";
 import { NextRequest, NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
 import { emitter } from "@/lib/eventEmitter";
+import { prisma } from "@/lib/prisma";
 
+/**
+ * Post an answer to a question.
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ qid: string }> },
@@ -38,6 +41,12 @@ export async function POST(
         { status: 404 },
       );
     }
+    if (!question.isOpen) {
+      return NextResponse.json(
+        { error: "Question is not open for answers" },
+        { status: 409 },
+      );
+    }
 
     const created = await prisma.answer.create({
       data: {
@@ -47,8 +56,7 @@ export async function POST(
       select: { id: true, createdAt: true },
     });
 
-
-    const eventId = `answer-to-question:${question.id}`
+    const eventId = `answer-to-question:${question.id}`;
     emitter.emit(eventId, {
       message: "createdAnswer",
       createdAt: created.createdAt,

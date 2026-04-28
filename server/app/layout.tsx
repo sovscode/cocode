@@ -1,7 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/next"
+
+import { Geist, Geist_Mono } from "next/font/google";
+
+import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from "next";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +18,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CoCode | Real-Time Audience Collaboration for VSCode",
-  description: "Transform your coding streams and presentations. CoCode is a VSCode extension that lets instructors seamlessly accept real-time code contributions from their audience.",
+  description:
+    "Transform your coding streams and presentations. CoCode is a VSCode extension that lets instructors seamlessly accept real-time code contributions from their audience.",
 };
 
 export default function RootLayout({
@@ -29,6 +33,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased box-border bg-zinc-50`}
       >
         {children}
+        <Toaster position="top-center" closeButton={true} />
       </body>
       <Analytics />
     </html>
