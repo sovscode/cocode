@@ -5,43 +5,58 @@ import "./editor-styles.css";
 import MonacoEditor, { OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
 
+import { IdeProps } from "./answer";
 import { QuestionModel } from "@/lib/generated/prisma/models";
 import { Spinner } from "@/components/ui/spinner";
 /* @ts-ignore */
 import { constrainedEditor } from "constrained-editor-plugin";
 import type { editor } from "monaco-editor";
+import { useSession } from "@/context/session-context";
 
 export default function IDE({
-  question,
+  before,
+  content,
+  after,
+  language,
+  readonly,
   onChangeUserAnswer,
-}: {
-  question: QuestionModel;
+}: IdeProps & {
   onChangeUserAnswer: (answer: string) => void;
 }) {
+  const { hasQuestion } = useSession();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const selectionListenerRef = useRef<{ dispose: () => void } | null>(null);
   const constrainedInstanceRef = useRef<any>(null);
 
   // Calculate the immutable line counts
-  const initialTotalLines = question.content.split(/\r?\n/).length;
-  const fromLine = Math.min(question.fromLine || 1, initialTotalLines);
-  const toLine = Math.min(question.toLine || 2, initialTotalLines + 1);
-  const topReadonlyCount = fromLine - 1;
-  const bottomReadonlyCount = Math.max(0, initialTotalLines - toLine + 1);
+
+  const editorContent = [before, content, after].join("\n");
+  const initialTotalLines = editorContent.split("\n").length;
+  // Region
+  const topReadonlyCount = before.split("\n").length;
+  const bottomReadonlyCount = after.split("\n").length;
+  const fromLine = topReadonlyCount + 1;
+  const fromLineIndex = Math.max(0, fromLine - 1);
+  const toLine = initialTotalLines - bottomReadonlyCount + 1;
+  const toLineIndex = Math.max(0, toLine - 1);
+  console.log(fromLine, toLine);
+  console.log(fromLineIndex, toLineIndex);
 
   const extractUserAnswer = () => {
-    if (!editorRef.current) return "";
+    if (!editorRef.current) {
+      return "";
+    }
 
     const currentCode = editorRef.current.getValue();
     const currentLines = currentCode.split(/\r?\n/);
 
-    const userCodeLines = currentLines.slice(
-      topReadonlyCount,
-      currentLines.length - bottomReadonlyCount,
-    );
+    const userCodeLines = currentLines.slice(fromLineIndex, toLineIndex);
 
-    return userCodeLines.join("\n");
+    const userAnswerContent = userCodeLines.join("\n");
+    console.log("userAnswerContent");
+    console.log(userAnswerContent);
+    return userAnswerContent;
   };
 
   const setupEditorForQuestion = () => {
@@ -58,8 +73,8 @@ export default function IDE({
     }
 
     const newModel = monaco.editor.createModel(
-      question.content,
-      question.language || "javascript",
+      editorContent,
+      language || "javascript",
     );
     editor.setModel(newModel);
 
@@ -168,21 +183,30 @@ export default function IDE({
             sel.endLineNumber > currentEditableRange.endLineNumber,
         );
 
-        editor.updateOptions({ readOnly: isOutside || !question.isOpen });
+        console.log("isOutside", isOutside);
+        editor.updateOptions({ readOnly: isOutside || readonly });
       });
     } else {
-      editor.updateOptions({ readOnly: true });
+      editor.updateOptions({ readOnly: readonly });
     }
 
     // Ping the parent with the initial extracted answer
-    onChangeUserAnswer(extractUserAnswer());
+    // onChangeUserAnswer(extractUserAnswer());
   };
 
   // Run setup whenever the question prop changes
   useEffect(() => {
     setupEditorForQuestion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question]);
+  }, [readonly]);
+  useEffect(() => {
+    const currentEditorValue = editorRef.current?.getValue();
+    const newEditorValue = [before, content, after].join("\n");
+    if (currentEditorValue != newEditorValue) {
+      editorRef.current?.setValue(newEditorValue);
+      // TODO: Update grey-out here
+    }
+  }, [before, content, after]);
 
   // Initial mount
   const handleEditorDidMount: OnMount = (editor, monaco) => {
@@ -194,26 +218,29 @@ export default function IDE({
   };
 
   function handleChange() {
-    onChangeUserAnswer(extractUserAnswer());
+    const userAnswer = extractUserAnswer();
+    console.log("userAnswer");
+    console.log(userAnswer);
+    onChangeUserAnswer(userAnswer);
   }
 
-  return question ? (
+  return hasQuestion ? (
     <MonacoEditor
       defaultLanguage="javascript"
       onMount={handleEditorDidMount}
       onChange={handleChange}
       loading={<Spinner className="w-8 h-8 text-slate-400" />}
       options={{
-        domReadOnly: !question.isOpen,
-        readOnly: !question.isOpen,
-        cursorStyle: question.isOpen ? "line" : "line-thin",
-        cursorBlinking: question.isOpen ? "blink" : "solid",
+        domReadOnly: readonly,
+        readOnly: readonly,
+        cursorStyle: readonly ? "line-thin" : "line",
+        cursorBlinking: readonly ? "solid" : "blink",
         automaticLayout: true,
         fixedOverflowWidgets: true,
         readOnlyMessage: {
-          value: question.isOpen
-            ? "Edit the area highlighted with green."
-            : "The question is currently not open for answers.",
+          value: readonly
+            ? "The question is currently not open for answers."
+            : "Edit the area highlighted with green.",
         },
       }}
     />

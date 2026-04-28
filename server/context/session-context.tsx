@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer } from "react";
+import { act, createContext, useContext, useReducer } from "react";
 
 import { Prisma } from "@/lib/generated/prisma/client";
 import { toast } from "sonner";
@@ -13,10 +13,12 @@ type SessionContextType = {
   statedQuestion: QuestionWithChosenAnswer | null;
   beforeEditableRegion: string;
   afterEditableRegion: string;
-  hasChosenAnswer: boolean;
+  hasAChosenAnswer: boolean;
   statedQuestionContent: string;
   chosenAnswerContent: string;
   userAnswerContent: string;
+  canSubmit: boolean;
+  submittedAnswers: string[];
 };
 const initialSessionContext: SessionContextType = {
   isLoading: false,
@@ -28,10 +30,12 @@ const initialSessionContext: SessionContextType = {
   statedQuestion: null,
   beforeEditableRegion: "",
   afterEditableRegion: "",
-  hasChosenAnswer: false,
+  hasAChosenAnswer: false,
   statedQuestionContent: "",
   userAnswerContent: "",
   chosenAnswerContent: "",
+  canSubmit: false,
+  submittedAnswers: [],
 };
 const SessionContext = createContext<SessionContextType>(initialSessionContext);
 
@@ -77,9 +81,12 @@ export function useSessionDispatch() {
 
 type DispatchEvents =
   | { type: "SetIsLoading"; value: boolean }
-  | { type: "UpdateUserChanges"; value: string }
   | { type: "UpdateCurrentQuestion"; value: QuestionWithChosenAnswer }
+  | { type: "UpdateUserAnswer"; value: { content: string } }
+  | { type: "UpdateChosenAnswer"; value: { content: string } }
   | { type: "UpdateCode"; value: number }
+  | { type: "ResetUserAnswer" }
+  | { type: "DidSubmit"; value: { content: string } }
   | { type: "SetError"; value: Error };
 function sessionReducer(
   session: SessionContextType,
@@ -92,19 +99,37 @@ function sessionReducer(
         isLoading: action.value,
       };
     }
-    case "UpdateUserChanges": {
+    case "DidSubmit": {
+      const newSubmittedAnswers = [
+        ...session.submittedAnswers,
+        action.value.content,
+      ];
+      const canSubmit = decideCanSubmit(
+        session.userAnswerContent,
+        session.statedQuestionContent,
+        newSubmittedAnswers,
+      );
       return {
         ...session,
-        userAnswerContent: action.value,
+        submittedAnswers: newSubmittedAnswers,
+        canSubmit,
+      };
+    }
+    case "ResetUserAnswer": {
+      return {
+        ...session,
+        userAnswerContent: session.statedQuestionContent,
+        canSubmit: false,
       };
     }
     case "UpdateCurrentQuestion": {
-      const contentSplit = action.value.content.split("\n");
-      const before = contentSplit.slice(0, action.value.fromLine).join("\n");
-      const content = contentSplit
-        .slice(action.value.fromLine, action.value.toLine)
-        .join("\n");
-      const after = contentSplit.slice(action.value.toLine).join("\n");
+      console.log("QUestion, ", action.value.fromLine, action.value.toLine);
+      const fromLineIndex = action.value.fromLine - 1;
+      const toLineIndex = action.value.toLine - 1;
+      const lines = action.value.content.split("\n");
+      const before = lines.slice(0, fromLineIndex).join("\n");
+      const content = lines.slice(fromLineIndex, toLineIndex).join("\n");
+      const after = lines.slice(toLineIndex).join("\n");
       return {
         ...session,
         statedQuestion: action.value,
@@ -112,6 +137,31 @@ function sessionReducer(
         statedQuestionContent: content,
         afterEditableRegion: after,
         isLoading: false,
+        hasQuestion: !!action.value,
+        userAnswerContent: content,
+        chosenAnswerContent: action.value.chosenAnswer?.text || "",
+        hasAChosenAnswer: !!action.value?.chosenAnswer,
+        isOpen: action.value.isOpen,
+      };
+    }
+
+    case "UpdateUserAnswer": {
+      const canSubmit = decideCanSubmit(
+        action.value.content,
+        session.statedQuestionContent,
+        session.submittedAnswers,
+      );
+
+      return {
+        ...session,
+        userAnswerContent: action.value.content,
+        canSubmit,
+      };
+    }
+    case "UpdateChosenAnswer": {
+      return {
+        ...session,
+        chosenAnswerContent: action.value.content,
       };
     }
     case "UpdateCode": {
@@ -128,4 +178,14 @@ function sessionReducer(
       };
     }
   }
+}
+function decideCanSubmit(
+  currentContent: string,
+  statedQuestionContent: string,
+  submittedAnswers: string[],
+) {
+  const isPreviouslySubmitted = submittedAnswers.includes(currentContent);
+  const isDifferentFromStatedQuestion = currentContent != statedQuestionContent;
+  const canSubmit = !isPreviouslySubmitted && isDifferentFromStatedQuestion;
+  return canSubmit;
 }

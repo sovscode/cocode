@@ -1,73 +1,112 @@
 "use client";
 
 import IDE, { extractLineRange } from "./ide";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useSession, useSessionDispatch } from "@/context/session-context";
 
 import Menubar from "./menubar";
+import ModeSelect from "./mode-select";
 import { toast } from "sonner";
-import { useSession } from "@/context/session-context";
 import { useState } from "react";
 
+export type ViewMode = "statedQuestion" | "userAnswer" | "chosenAnswer";
+
+export type IdeProps = {
+  before: string;
+  content: string;
+  after: string;
+  readonly: boolean;
+  language: string;
+};
+
 export default function Answer() {
-  const { statedQuestion: question, code, hasChosenAnswer } = useSession();
-  const [viewMode, setViewMode] = useState("statedQuestion");
+  const {
+    statedQuestion: question,
+    code,
+    hasAChosenAnswer,
+    beforeEditableRegion,
+    afterEditableRegion,
+    userAnswerContent,
+    chosenAnswerContent,
+    statedQuestionContent,
+    canSubmit,
+    isOpen,
+    hasQuestion,
+  } = useSession();
+  const sessionDispatch = useSessionDispatch();
+  const [viewMode, setViewMode] = useState<ViewMode>("userAnswer");
 
   let hintMessage = "Edit the code below and submit when you're done.";
-  if (question && !question.isOpen) {
+  if (hasQuestion && !isOpen) {
     hintMessage = "The question is currently not open for answers.";
   }
 
-  let questionContent = question?.content;
-  if (question && !question.isOpen && question?.chosenAnswer?.text) {
-    questionContent = question.chosenAnswer.text;
-  }
-  const unchangedEditableInput = extractLineRange(
-    question?.content,
-    question?.fromLine,
-    question?.toLine,
-  );
-  const [userAnswer, setUserAnswer] = useState(unchangedEditableInput);
-  const [latestSubmittedAnswer, setLatestSubmittedAnswer] = useState(
-    unchangedEditableInput,
-  );
   const [resetKey, setResetKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-
-  const hasChanges = unchangedEditableInput != userAnswer;
-  const canSubmit =
-    userAnswer != latestSubmittedAnswer && userAnswer != unchangedEditableInput;
+  if (!sessionDispatch) {
+    return;
+  }
 
   const handleSubmit = () => {
+    if (!question) return;
     setSubmitting(true);
     fetch(`/api/questions/${question.id}/answers`, {
       method: "POST",
-      body: JSON.stringify({ text: userAnswer }),
+      body: JSON.stringify({ text: userAnswerContent }),
     })
       .then((res) => {
         toast.success("Your submission has been sent to the presenter.", {
           description: "Feel free to post another submission.",
         });
-        setLatestSubmittedAnswer(userAnswer);
       })
       .catch((err) =>
         window.alert("An error occurred submitting your answer:("),
       )
       .finally(() => {
         setSubmitting(false);
+        sessionDispatch({
+          type: "DidSubmit",
+          value: { content: userAnswerContent },
+        });
       });
   };
   const handleReset = () => {
-    setUserAnswer(unchangedEditableInput);
+    if (sessionDispatch) sessionDispatch({ type: "ResetUserAnswer" });
     setResetKey((key) => key + 1);
   };
+
+  let ideProps: IdeProps = {
+    before: beforeEditableRegion,
+    content: statedQuestionContent,
+    after: afterEditableRegion,
+    readonly: true,
+    language: question?.language || "javascript",
+  };
+  switch (viewMode) {
+    case "statedQuestion":
+      ideProps = {
+        ...ideProps,
+        content: statedQuestionContent,
+        readonly: true,
+      };
+      break;
+    case "chosenAnswer":
+      ideProps = { ...ideProps, content: chosenAnswerContent, readonly: true };
+      break;
+    case "userAnswer":
+      ideProps = { ...ideProps, content: userAnswerContent, readonly: !isOpen };
+      break;
+  }
+  console.log("ideProps is now: ", ideProps);
+  function handleChangeUserAnswer(userAnswer: string): void {
+    console.log("UpdateUserAnswer");
+    if (!sessionDispatch) return;
+    if (viewMode == "userAnswer") console.log("Dispatching ", userAnswer);
+    sessionDispatch({
+      type: "UpdateUserAnswer",
+      value: { content: userAnswer },
+    });
+  }
+
   return (
     <div className="flex flex-col items-stretch justify-center w-full h-screen max-w-5xl gap-2 p-2 mx-auto md:p-4 md:gap-4">
       <Menubar
@@ -75,25 +114,16 @@ export default function Answer() {
         submitting={submitting}
         onSubmit={handleSubmit}
         onReset={handleReset}
-        hasChanges={hasChanges}
+        hasChanges={userAnswerContent != statedQuestionContent}
         canSubmit={canSubmit}
       />
       <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
         <div className="border border-zinc-100 rounded-xl overflow-hidden w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
-          <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-full max-w-48">
-              <SelectValue placeholder="Select a mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="statedQuestion">Stated question</SelectItem>
-                <SelectItem value="userAnswer">Your changes</SelectItem>
-                <SelectItem value="chosenAnswer" disabled={hasChosenAnswer}>
-                  Chosen answer
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <ModeSelect
+            hasAChosenAnswer={hasAChosenAnswer}
+            viewMode={viewMode}
+            onViewModeChange={(viewMode: ViewMode) => setViewMode(viewMode)}
+          ></ModeSelect>
 
           <p className="p-4 text-center border-b text-slate-400">
             {hintMessage}
@@ -102,8 +132,12 @@ export default function Answer() {
           {question ? (
             <IDE
               key={resetKey}
-              question={question}
-              onChangeUserAnswer={setUserAnswer}
+              before={ideProps.before}
+              content={ideProps.content}
+              after={ideProps.after}
+              readonly={ideProps.readonly}
+              language={ideProps.language}
+              onChangeUserAnswer={handleChangeUserAnswer}
             />
           ) : (
             <div className="flex items-center justify-center w-full h-full">
