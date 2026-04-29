@@ -216,7 +216,7 @@ export class DocumentHandler {
 
       case 'in session, loading question': 
       case 'in session, taking suggestions':
-        vscode.commands.executeCommand('workbench.action.files.setActiveEditorReadonlyInSession');
+        // vscode.commands.executeCommand('workbench.action.files.setActiveEditorReadonlyInSession');
 
         const loading = state.enum === 'in session, loading question';
         this.updateRange(rangeToVsCodeRange(this.document, state.question.range), loading)
