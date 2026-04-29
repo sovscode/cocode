@@ -6,7 +6,6 @@ import MonacoEditor, { OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
 
 import { IdeProps } from "./answer";
-import { QuestionModel } from "@/lib/generated/prisma/models";
 import { Spinner } from "@/components/ui/spinner";
 /* @ts-ignore */
 import { constrainedEditor } from "constrained-editor-plugin";

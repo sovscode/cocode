@@ -1,10 +1,15 @@
 "use client";
 
-import IDE, { extractLineRange } from "./ide";
+import {
+  useCurrentQuestion,
+  useCurrentQuestionDispatch,
+} from "@/context/current-question-context";
 import { useSession, useSessionDispatch } from "@/context/session-context";
 
+import IDE from "./ide";
 import Menubar from "./menubar";
 import ModeSelect from "./mode-select";
+import QuestionsNavigator from "./questions-navigator";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -19,9 +24,10 @@ export type IdeProps = {
 };
 
 export default function Answer() {
+  const { code, hasQuestion } = useSession();
+  const sessionDispatch = useSessionDispatch();
   const {
     statedQuestion: question,
-    code,
     hasAChosenAnswer,
     beforeEditableRegion,
     afterEditableRegion,
@@ -30,9 +36,9 @@ export default function Answer() {
     statedQuestionContent,
     canSubmit,
     isOpen,
-    hasQuestion,
-  } = useSession();
-  const sessionDispatch = useSessionDispatch();
+  } = useCurrentQuestion();
+  const currentQuestionDispatch = useCurrentQuestionDispatch();
+
   const [viewMode, setViewMode] = useState<ViewMode>("userAnswer");
 
   let hintMessage = "Edit the code below and submit when you're done.";
@@ -42,7 +48,7 @@ export default function Answer() {
 
   const [resetKey, setResetKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  if (!sessionDispatch) {
+  if (!sessionDispatch || !currentQuestionDispatch) {
     return;
   }
 
@@ -63,14 +69,14 @@ export default function Answer() {
       )
       .finally(() => {
         setSubmitting(false);
-        sessionDispatch({
+        currentQuestionDispatch({
           type: "DidSubmit",
           value: { content: userAnswerContent },
         });
       });
   };
   const handleReset = () => {
-    if (sessionDispatch) sessionDispatch({ type: "ResetUserAnswer" });
+    currentQuestionDispatch({ type: "ResetUserAnswer" });
     setResetKey((key) => key + 1);
   };
 
@@ -99,10 +105,9 @@ export default function Answer() {
   console.log("ideProps is now: ", ideProps);
   function handleContentChange(userAnswer: string): void {
     if (viewMode != "userAnswer") return;
-    console.log("UpdateUserAnswer");
-    if (!sessionDispatch) return;
     if (viewMode == "userAnswer") console.log("Dispatching ", userAnswer);
-    sessionDispatch({
+    if (!currentQuestionDispatch) return;
+    currentQuestionDispatch({
       type: "UpdateUserAnswer",
       value: { content: userAnswer },
     });
@@ -120,11 +125,14 @@ export default function Answer() {
       />
       <div className="flex items-center justify-center h-[calc(100vh-80px)] w-full">
         <div className="border border-zinc-100 rounded-xl overflow-hidden w-full h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
-          <ModeSelect
-            hasAChosenAnswer={hasAChosenAnswer}
-            viewMode={viewMode}
-            onViewModeChange={(viewMode: ViewMode) => setViewMode(viewMode)}
-          ></ModeSelect>
+          <div className="p-2 flex justify-between items-center">
+            <ModeSelect
+              hasAChosenAnswer={hasAChosenAnswer}
+              viewMode={viewMode}
+              onViewModeChange={(viewMode: ViewMode) => setViewMode(viewMode)}
+            ></ModeSelect>
+            <QuestionsNavigator />
+          </div>
 
           <p className="p-4 text-center border-b text-slate-400">
             {hintMessage}
