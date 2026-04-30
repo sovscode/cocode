@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useContext, useEffect, useReducer } from "react";
 
 import { Prisma } from "@/lib/generated/prisma/client";
@@ -29,9 +31,9 @@ const initialCurrentQuestionContext: CurrentQuestionContextType = {
   canSubmit: false,
   submittedAnswers: [],
 };
-const CurrentQuestionContext = createContext<CurrentQuestionContextType>(
-  initialCurrentQuestionContext,
-);
+const CurrentQuestionContext = createContext<
+  CurrentQuestionContextType | undefined
+>(undefined);
 
 const CurrentQuestionDispatchContext =
   createContext<React.Dispatch<DispatchEvents> | null>(null);
@@ -50,13 +52,7 @@ export function CurrentQuestionProvider({
   children,
 }: CurrentQuestionProviderProps) {
   const sessionContext = useSession();
-  console.log("sessionContext");
-  console.log(sessionContext);
-  if (!sessionContext) {
-    console.log("Sessioncontext is empty");
-  }
   const { questions, currentQuestionId } = sessionContext;
-  console.log(questions);
 
   const [currentQuestionContext, dispatch] = useReducer(
     currentQuestionReducer,
@@ -72,16 +68,23 @@ export function CurrentQuestionProvider({
   }, [questions, currentQuestionId]);
 
   return (
-    <CurrentQuestionContext value={currentQuestionContext}>
-      <CurrentQuestionDispatchContext value={dispatch}>
+    <CurrentQuestionContext.Provider value={currentQuestionContext}>
+      <CurrentQuestionDispatchContext.Provider value={dispatch}>
         {children}
-      </CurrentQuestionDispatchContext>
-    </CurrentQuestionContext>
+      </CurrentQuestionDispatchContext.Provider>
+    </CurrentQuestionContext.Provider>
   );
 }
 
 export function useCurrentQuestion() {
-  return useContext(CurrentQuestionContext);
+  const context = useContext(CurrentQuestionContext);
+  if (context === undefined) {
+    throw new Error(
+      "useCurrentQuestion must be used within a CurrentQuestionProvider",
+    );
+  }
+
+  return context;
 }
 
 export function useCurrentQuestionDispatch() {
@@ -101,6 +104,7 @@ function currentQuestionReducer(
   switch (action.type) {
     case "UpdateCurrentQuestion": {
       const statedQuestion = action.value;
+      console.log(statedQuestion);
       if (!statedQuestion) return currentQuestion;
 
       const fromLineIndex = statedQuestion.fromLine - 1;
@@ -167,6 +171,9 @@ function currentQuestionReducer(
         ...currentQuestion,
         chosenAnswerContent: action.value.content,
       };
+    }
+    default: {
+      return currentQuestion;
     }
   }
 }

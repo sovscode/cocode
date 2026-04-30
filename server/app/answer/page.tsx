@@ -16,6 +16,5 @@ export default async function Page({
     return <p>Invalid join code: {codeParam}</p>;
   }
 
-  console.log("code", code);
   return <App code={code} />;
 }

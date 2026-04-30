@@ -10,7 +10,6 @@ import { Spinner } from "@/components/ui/spinner";
 /* @ts-ignore */
 import { constrainedEditor } from "constrained-editor-plugin";
 import type { editor } from "monaco-editor";
-import { useSession } from "@/context/session-context";
 
 export default function IDE({
   before,
@@ -22,7 +21,6 @@ export default function IDE({
 }: IdeProps & {
   onContentChange: (answer: string) => void;
 }) {
-  const { hasQuestion } = useSession();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const selectionListenerRef = useRef<{ dispose: () => void } | null>(null);
@@ -38,9 +36,6 @@ export default function IDE({
   const fromLine = topReadonlyCount + 1;
   const fromLineIndex = Math.max(0, fromLine - 1);
   const toLine = initialTotalLines - bottomReadonlyCount + 1;
-  const toLineIndex = Math.max(0, toLine - 1);
-  console.log(fromLine, toLine);
-  console.log(fromLineIndex, toLineIndex);
 
   const extractUserAnswer = () => {
     if (!editorRef.current) {
@@ -56,8 +51,6 @@ export default function IDE({
     );
 
     const userAnswerContent = userCodeLines.join("\n");
-    console.log("userAnswerContent");
-    console.log(userAnswerContent);
     return userAnswerContent;
   };
 
@@ -230,7 +223,6 @@ export default function IDE({
             sel.endLineNumber > currentEditableRange.endLineNumber,
         );
 
-        console.log("isOutside", isOutside);
         editor.updateOptions({ readOnly: isOutside || readonly });
       });
     } else {
@@ -240,12 +232,10 @@ export default function IDE({
 
   function handleChange() {
     const userAnswer = extractUserAnswer();
-    console.log("userAnswer");
-    console.log(userAnswer);
     onContentChange(userAnswer);
   }
 
-  return hasQuestion ? (
+  return (
     <MonacoEditor
       defaultLanguage="javascript"
       onMount={handleEditorDidMount}
@@ -265,8 +255,6 @@ export default function IDE({
         },
       }}
     />
-  ) : (
-    <div>Waiting for the presenter to post a question ...</div>
   );
 }
 

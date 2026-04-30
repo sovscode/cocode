@@ -1,6 +1,10 @@
 "use client";
 
-import { useSession, useSessionDispatch } from "@/context/session-context";
+import {
+  QuestionWithChosenAnswer,
+  useSession,
+  useSessionDispatch,
+} from "@/context/session-context";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useEffect } from "react";
@@ -61,13 +65,14 @@ export default function SessionFetcher({
           if (!response.ok) {
             throw new Error(`Response status: ${response.status}`);
           }
-          const latestQuestion = await response.json();
+          const latestQuestion: QuestionWithChosenAnswer =
+            await response.json();
           if (!latestQuestion) {
             console.error("Failed to fetch latest question.");
           }
 
           sessionDispatch({
-            type: "UpdateCurrentQuestion",
+            type: "FetchedQuestionWithId",
             value: latestQuestion,
           });
         })
@@ -76,6 +81,8 @@ export default function SessionFetcher({
             type: "SetError",
             value: Error(`Couldn't join session with code ${code}`),
           });
+        })
+        .finally(() => {
           sessionDispatch({
             type: "SetIsLoading",
             value: false,

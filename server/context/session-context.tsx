@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useContext, useReducer } from "react";
 
 import { Prisma } from "@/lib/generated/prisma/client";
@@ -12,6 +14,8 @@ type SessionContextType = {
 
   questions: QuestionWithChosenAnswer[]; // Should not be visible to users of context
   currentQuestionId: string | null;
+  hasPreviousQuestion: boolean;
+  hasNextQuestion: boolean;
 };
 const initialSessionContext: SessionContextType = {
   code: 0,
@@ -22,8 +26,10 @@ const initialSessionContext: SessionContextType = {
 
   questions: [],
   currentQuestionId: null,
+  hasPreviousQuestion: false,
+  hasNextQuestion: false,
 };
-const SessionContext = createContext<SessionContextType>(initialSessionContext);
+const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 const SessionDispatchContext =
   createContext<React.Dispatch<DispatchEvents> | null>(null);
@@ -48,16 +54,21 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   );
 
   return (
-    <SessionContext value={sessionContext}>
-      <SessionDispatchContext value={dispatch}>
+    <SessionContext.Provider value={sessionContext}>
+      <SessionDispatchContext.Provider value={dispatch}>
         {children}
-      </SessionDispatchContext>
-    </SessionContext>
+      </SessionDispatchContext.Provider>
+    </SessionContext.Provider>
   );
 }
 
 export function useSession() {
-  return useContext(SessionContext);
+  const context = useContext(SessionContext);
+  if (context === undefined) {
+    throw new Error("useSession must be used within a SessionProvider");
+  }
+
+  return context;
 }
 
 export function useSessionDispatch() {
@@ -68,15 +79,23 @@ type DispatchEvents =
   | { type: "UpdateCode"; value: number }
   | { type: "SetError"; value: Error }
   | { type: "SetIsLoading"; value: boolean }
+  | { type: "NextQuestion" }
+  | { type: "PreviousQuestion" }
   | {
       type: "FetchedQuestionWithId";
-      value: { id: string; question: QuestionWithChosenAnswer };
+      value: QuestionWithChosenAnswer;
     };
 function sessionReducer(
   session: SessionContextType,
   action: DispatchEvents,
 ): SessionContextType {
   switch (action.type) {
+    case "PreviousQuestion": {
+      return navigateToQuestionWithOffset(-1, session);
+    }
+    case "NextQuestion": {
+      return navigateToQuestionWithOffset(1, session);
+    }
     case "SetIsLoading": {
       return {
         ...session,
@@ -84,18 +103,41 @@ function sessionReducer(
       };
     }
     case "FetchedQuestionWithId": {
-      const newQuestionsList = [...session.questions, action.value.question];
+      const existingQuestionIndex = session.questions.findIndex(
+        (question) => action.value.id == question.id,
+      );
+      if (existingQuestionIndex >= 0) {
+        const newQuestions = [...session.questions];
+        session.questions[existingQuestionIndex] = action.value;
+        return { ...session, questions: newQuestions };
+      }
+      const newQuestionsList = [...session.questions, action.value];
       newQuestionsList.sort((a, b) => {
-        return a.createdAt.getTime() - b.createdAt.getTime();
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
       });
 
-      const currentQuestionId =
-        newQuestionsList[newQuestionsList.length - 1].id;
+      let currentQuestionId = session.currentQuestionId;
+      const questionsCount = newQuestionsList.length;
+      if (!currentQuestionId) {
+        if (questionsCount > 0) {
+          currentQuestionId = newQuestionsList[questionsCount - 1].id;
+        }
+      }
+
+      const { hasPreviousQuestion, hasNextQuestion } =
+        determineHasPreviousAndNextQuestion(
+          newQuestionsList,
+          session.currentQuestionId,
+        );
 
       return {
         ...session,
         questions: newQuestionsList,
         currentQuestionId,
+        hasPreviousQuestion,
+        hasNextQuestion,
       };
     }
 
@@ -112,5 +154,49 @@ function sessionReducer(
         errorMsg: action.value.message,
       };
     }
+    default: {
+      return session;
+    }
   }
+}
+
+const determineHasPreviousAndNextQuestion = (
+  questions: QuestionWithChosenAnswer[],
+  currentQuestionId: string | null,
+): { hasPreviousQuestion: boolean; hasNextQuestion: boolean } => {
+  let hasPreviousQuestion = false;
+  let hasNextQuestion = false;
+  const currentQuestionIndex = questions.findIndex((question) => {
+    return question.id == currentQuestionId;
+  });
+  if (currentQuestionIndex < 0) return { hasPreviousQuestion, hasNextQuestion };
+  hasPreviousQuestion = currentQuestionIndex > 0;
+  hasNextQuestion = currentQuestionIndex < questions.length - 1;
+  return { hasPreviousQuestion, hasNextQuestion };
+};
+
+function navigateToQuestionWithOffset(
+  offset: number,
+  session: SessionContextType,
+) {
+  const currentQuestionIndex = session.questions.findIndex((question) => {
+    return question.id == session.currentQuestionId;
+  });
+
+  if (currentQuestionIndex < 0) return session;
+
+  const newCurrentQuestionId =
+    session.questions[currentQuestionIndex + offset].id;
+
+  const { hasPreviousQuestion, hasNextQuestion } =
+    determineHasPreviousAndNextQuestion(
+      session.questions,
+      newCurrentQuestionId,
+    );
+  return {
+    ...session,
+    currentQuestionId: newCurrentQuestionId,
+    hasPreviousQuestion,
+    hasNextQuestion,
+  };
 }

@@ -102,10 +102,8 @@ export default function Answer() {
       ideProps = { ...ideProps, content: userAnswerContent, readonly: !isOpen };
       break;
   }
-  console.log("ideProps is now: ", ideProps);
   function handleContentChange(userAnswer: string): void {
     if (viewMode != "userAnswer") return;
-    if (viewMode == "userAnswer") console.log("Dispatching ", userAnswer);
     if (!currentQuestionDispatch) return;
     currentQuestionDispatch({
       type: "UpdateUserAnswer",

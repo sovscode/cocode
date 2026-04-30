@@ -8,11 +8,11 @@ export default function App({ code }: { code: number }) {
   return (
     <SessionProvider code={code}>
       {/* SessionFetcher only renders it's children if a session could be fetched */}
-      <CurrentQuestionProvider>
-        <SessionFetcher>
+      <SessionFetcher>
+        <CurrentQuestionProvider>
           <Answer />
-        </SessionFetcher>
-      </CurrentQuestionProvider>
+        </CurrentQuestionProvider>
+      </SessionFetcher>
     </SessionProvider>
   );
 }
